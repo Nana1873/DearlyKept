@@ -19,13 +19,16 @@ internal sealed class GiftLedger
         return true;
     }
 
-    public bool Remove(string id)
+    public bool UpdateMessage(string id, string messageText)
     {
-        int index = entries.FindIndex(entry => entry.Id == id);
-        if (index < 0)
+        if (messageText is null || !receiptIds.Contains(id))
             return false;
-        entries.RemoveAt(index);
-        // Keep the receipt ID until reload so a late duplicate callback can't undo removal.
+        int index = entries.FindIndex(entry => entry.Id == id);
+        GiftEntry original = entries[index];
+        GiftEntry updated = original with { MessageText = messageText };
+        if (!updated.IsValid() || original.MessageText == messageText)
+            return false;
+        entries[index] = updated;
         Revision++;
         return true;
     }

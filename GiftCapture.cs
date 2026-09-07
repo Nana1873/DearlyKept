@@ -63,7 +63,9 @@ internal sealed class GiftCapture
                 if (!known.TryGetValue(item, out GiftEntry? entry))
                 {
                     entry = this.journal.CreateEntry(item, sender, letter.mailTitle,
-                        birthday ? "birthday" : "mail", birthday ? HappyBirthdayIntegration.ModId : null);
+                        birthday ? "birthday" : Game1.player.spouse == sender ? "spouse" : "mail",
+                        birthday ? HappyBirthdayIntegration.ModId : null,
+                        GiftMessage.Normalize(string.Concat(letter.mailMessage)));
                     if (entry is null)
                         continue;
                     known.Add(item, entry);

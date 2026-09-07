@@ -55,12 +55,12 @@ internal sealed class GiftJournal
             helper.Data.WriteSaveData(SaveKey, ledger.Snapshot());
     }
 
-    public GiftEntry? CreateEntry(Item item, string senderId, string sourceId, string origin, string? sourceModId)
+    public GiftEntry? CreateEntry(Item item, string senderId, string sourceId, string origin, string? sourceModId, string? messageText = null)
     {
         if (!CanRecord || item is null || item.Stack <= 0)
             return null;
         GiftEntry entry = new(Guid.NewGuid().ToString("N"), senderId, sourceId, origin, sourceModId,
-            Game1.year, Game1.currentSeason, Game1.dayOfMonth, item.QualifiedItemId, item.DisplayName, item.Stack, item.Quality);
+            Game1.year, Game1.currentSeason, Game1.dayOfMonth, item.QualifiedItemId, item.DisplayName, item.Stack, item.Quality, messageText);
         return entry.IsValid() ? entry : null;
     }
 
@@ -70,7 +70,7 @@ internal sealed class GiftJournal
             monitor.Log($"Recorded {entry.QualifiedItemId} x{entry.Quantity} from {entry.SenderId} ({entry.SourceId}) in the gift journal.", LogLevel.Trace);
     }
 
-    public bool Remove(string id) => CanRecord && ledger.Remove(id);
+    public bool UpdateMessage(string id, string messageText) => CanRecord && ledger.UpdateMessage(id, messageText);
 
     public string GetGiftsJson() => JsonSerializer.Serialize(Entries);
 }

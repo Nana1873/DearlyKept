@@ -12,8 +12,13 @@ internal sealed partial class ModEntry
     private const string BirthdayModId = "Omegasis.HappyBirthday";
     private const string BirthdayCoreType = "Omegasis.HappyBirthday.HappyBirthdayModCore";
     private const string BirthdayGiftAssetPrefix = "Mods/Omegasis.HappyBirthday/Gifts/";
+    private const string BirthdayDialogueAsset = "Characters/Dialogue/Evelyn";
+    private const string BirthdayGreetingKey = "Omegasis.HappyBirthday.BirthdayGreeting";
+    private const string MultipageBirthdayGreeting = "Happy birthday, @! This first page is an explicitly authored QA greeting."
+        + "#$b#On this second page, @, the Cookie comes with a complete two-page memory. $h";
     private static readonly string[] BirthdayNpcs = { "Evelyn", "Gus", "Robin" };
     private string? birthdayFixtureId;
+    private bool birthdayMultipage;
     private BirthdayAttempt? birthdayAttempt;
 
     private void RunBirthdayCommand(string[] args, GuardContext owned)
@@ -29,6 +34,8 @@ internal sealed partial class ModEntry
                 Check(HbField<Item?>(gifts, "BirthdayGiftToReceive") is null, "no birthday delivery is pending before fixture setup");
                 birthdayFixtureId = owned.Identity.FixtureId;
                 birthdayAttempt = null;
+                birthdayMultipage = false;
+                Helper.GameContent.InvalidateCache(BirthdayDialogueAsset);
                 HbMethod(manager, "setBirthday", new[] { typeof(string), typeof(int) }, Game1.currentSeason, Game1.dayOfMonth);
                 HbMethod(manager, "resetVillagerQueue", Type.EmptyTypes);
                 foreach (string name in BirthdayNpcs)
@@ -42,6 +49,14 @@ internal sealed partial class ModEntry
                 Check((bool)HbMethod(manager, "isBirthday", Type.EmptyTypes)!, "Happy Birthday reports today as the player's birthday");
                 Monitor.Log("DKQA birthday fixture configured through real BirthdayManager state: today, ten hearts with Evelyn/Gus/Robin, their real HB gift assets contain one Cookie. Use prepare for ordinary comparison items, then birthday preview or birthday talk <NPC>.", LogLevel.Info);
                 break;
+            case "multipage":
+                RequireNoMenu();
+                RequireBirthdayFixture(owned);
+                Check(!(bool)HbMethod(manager, "hasGivenBirthdayGift", new[] { typeof(string) }, "Evelyn")!, "Evelyn has not delivered this fixture's birthday gift yet");
+                birthdayMultipage = true;
+                Helper.GameContent.InvalidateCache(BirthdayDialogueAsset);
+                Monitor.Log("DKQA enabled a two-page QA greeting through Happy Birthday's actual Evelyn dialogue asset. Run birthday talk Evelyn, wait for the logged first page, use actual input to advance, wait for the logged second page, then close and run assertBirthday. A new birthday prepare restores the normal greeting.", LogLevel.Info);
+                break;
             case "talk":
                 RequireNoMenu();
                 RequireBirthdayFixture(owned);
@@ -54,7 +69,10 @@ internal sealed partial class ModEntry
                 // replaces it with its greeting and calls both real gift overloads.
                 npc.resetCurrentDialogue();
                 npc.resetSeasonalDialogue();
-                birthdayAttempt = new BirthdayAttempt(owned.Identity.FixtureId, sender, CookieCount(), CaptureJournal(), Game1.player.isInventoryFull(), Game1.currentLocation.debris.Select(p => p.item).OfType<Item>().ToArray());
+                birthdayAttempt = new BirthdayAttempt(owned.Identity.FixtureId, sender, CookieCount(), CaptureJournal(), Game1.player.isInventoryFull(), Game1.currentLocation.debris.Select(p => p.item).OfType<Item>().ToArray())
+                {
+                    ExpectMultipage = birthdayMultipage && sender == "Evelyn"
+                };
                 Game1.drawDialogue(npc);
                 Check(Game1.activeClickableMenu is DialogueBox && Game1.currentSpeaker == npc, $"vanilla dialogue opened with the actual {sender} NPC");
                 Monitor.Log($"DKQA birthday dialogue requested for {sender}; inventoryFull={birthdayAttempt.InventoryWasFull}. Wait for the genuine HB greeting, then close it with actual game input. No gift method was called by QA.", LogLevel.Info);
@@ -110,18 +128,19 @@ internal sealed partial class ModEntry
             case "status":
                 Monitor.Log($"DKQA Happy Birthday {Helper.ModRegistry.Get(BirthdayModId)!.Manifest.Version}; isBirthday={HbMethod(manager, "isBirthday", Type.EmptyTypes)}; fixturePrepared={birthdayFixtureId == owned.Identity.FixtureId}; journal={CaptureJournal().Json}", LogLevel.Info);
                 Item? pending = HbField<Item?>(gifts, "BirthdayGiftToReceive");
-                Monitor.Log($"DKQA birthday pending={DescribeBirthdayItem(pending)}; attempt={birthdayAttempt?.Sender ?? "none"}; observedPath={birthdayAttempt?.ObservedPath ?? "none"}", LogLevel.Info);
+                Monitor.Log($"DKQA birthday pending={DescribeBirthdayItem(pending)}; attempt={birthdayAttempt?.Sender ?? "none"}; observedPath={birthdayAttempt?.ObservedPath ?? "none"}; observedPages={birthdayAttempt?.DisplayedPages.Count ?? 0}; transcript={JsonSerializer.Serialize(birthdayAttempt?.FinalDialogueText)}", LogLevel.Info);
                 foreach (DebrisLine line in BirthdayDebrisSnapshot())
                     Monitor.Log($"DKQA birthday debris={line.ItemId} x{line.Stack}; raw={line.RawStamp ?? "<none>"}", LogLevel.Info);
                 break;
             default:
-                throw new InvalidOperationException("Usage: dkqa birthday prepare | talk Evelyn|Gus|Robin | preview Evelyn|Gus|Robin | fill | room | status.");
+                throw new InvalidOperationException("Usage: dkqa birthday prepare | multipage | talk Evelyn|Gus|Robin | preview Evelyn|Gus|Robin | fill | room | status.");
         }
     }
 
     private void EditBirthdayFixtureGifts(object? sender, AssetRequestedEventArgs e)
     {
-        if (birthdayFixtureId is null || !BirthdayNpcs.Any(name => e.NameWithoutLocale.IsEquivalentTo(BirthdayGiftAssetPrefix + name)))
+        bool dialogueAsset = birthdayMultipage && e.NameWithoutLocale.IsEquivalentTo(BirthdayDialogueAsset);
+        if (birthdayFixtureId is null || (!dialogueAsset && !BirthdayNpcs.Any(name => e.NameWithoutLocale.IsEquivalentTo(BirthdayGiftAssetPrefix + name))))
             return;
         try
         {
@@ -131,8 +150,16 @@ internal sealed partial class ModEntry
                 // Recheck ownership when SMAPI executes the deferred edit.
                 RequireBirthdayFixture(RequireOwnedFixture());
                 IDictionary<string, string> data = asset.AsDictionary<string, string>().Data;
-                data.Clear();
-                data["(O)223"] = "1";
+                if (dialogueAsset)
+                {
+                    if (birthdayMultipage)
+                        data[BirthdayGreetingKey] = MultipageBirthdayGreeting;
+                }
+                else
+                {
+                    data.Clear();
+                    data["(O)223"] = "1";
+                }
             }, AssetEditPriority.Late + 100);
         }
         catch (Exception ex)
@@ -145,6 +172,7 @@ internal sealed partial class ModEntry
     {
         bool hadFixture = birthdayFixtureId is not null;
         birthdayFixtureId = null;
+        birthdayMultipage = false;
         birthdayAttempt = null;
         journalReceiptBaseline = null;
         journalUnchangedBaseline = null;
@@ -152,30 +180,49 @@ internal sealed partial class ModEntry
         // Cleanup only: never leave an edited in-memory gift asset available to
         // a later save after the verified disposable world has been unloaded.
         if (hadFixture)
+        {
             foreach (string name in BirthdayNpcs)
                 Helper.GameContent.InvalidateCache(BirthdayGiftAssetPrefix + name);
+            Helper.GameContent.InvalidateCache(BirthdayDialogueAsset);
+        }
     }
 
     private void ObserveBirthdayDelivery(object? sender, UpdateTickedEventArgs e)
     {
-        if (birthdayAttempt is null || birthdayAttempt.ObservedPath is not null)
+        if (birthdayAttempt is null)
             return;
         try
         {
             GuardContext owned = RequireOwnedFixture();
             RequireBirthdayFixture(owned);
             CheckBirthdayAttemptOwner(owned);
-            object core = GetBirthdayCore();
-            object gifts = HbField<object>(core, "giftManager");
-            object manager = HbField<object>(core, "birthdayManager");
-            if (!(bool)HbMethod(manager, "hasGivenBirthdayWish", new[] { typeof(string) }, birthdayAttempt.Sender)!)
+            if (Game1.activeClickableMenu is not DialogueBox dialogue || Game1.currentSpeaker?.Name != birthdayAttempt.Sender)
                 return;
-            Item? pending = HbField<Item?>(gifts, "BirthdayGiftToReceive");
-            Item? dropped = Game1.currentLocation.debris.Select(p => p.item).FirstOrDefault(p => p?.QualifiedItemId == "(O)223" && !birthdayAttempt.ExistingDebris.Contains(p));
-            if (pending is null && dropped is null)
+            if (birthdayAttempt.ObservedDialogue is null)
+            {
+                object core = GetBirthdayCore();
+                object gifts = HbField<object>(core, "giftManager");
+                object manager = HbField<object>(core, "birthdayManager");
+                if (!(bool)HbMethod(manager, "hasGivenBirthdayWish", new[] { typeof(string) }, birthdayAttempt.Sender)!)
+                    return;
+                Item? pending = HbField<Item?>(gifts, "BirthdayGiftToReceive");
+                Item? dropped = Game1.currentLocation.debris.Select(p => p.item).FirstOrDefault(p => p?.QualifiedItemId == "(O)223" && !birthdayAttempt.ExistingDebris.Contains(p));
+                if (pending is null && dropped is null)
+                    return;
+                birthdayAttempt.ObservedDialogue = dialogue;
+                birthdayAttempt.ObservedPath = pending is not null ? "HB pending gift" : "HB dropped gift";
+                Monitor.Log($"DKQA observed {birthdayAttempt.ObservedPath} after the real dialogue for {birthdayAttempt.Sender}: {DescribeBirthdayItem(pending ?? dropped)}. Inventory cookies={CookieCount()}; journal={CaptureJournal().Json}", LogLevel.Info);
+            }
+            if (!ReferenceEquals(birthdayAttempt.ObservedDialogue, dialogue) || dialogue.characterDialoguesBrokenUp.Count == 0)
                 return;
-            birthdayAttempt.ObservedPath = pending is not null ? "HB pending gift" : "HB dropped gift";
-            Monitor.Log($"DKQA observed {birthdayAttempt.ObservedPath} after the real dialogue for {birthdayAttempt.Sender}: {DescribeBirthdayItem(pending ?? dropped)}. Inventory cookies={CookieCount()}; journal={CaptureJournal().Json}", LogLevel.Info);
+            // These short fixture pages have distinct text. Observe actual changes
+            // on the same real dialogue box without preparing any future page.
+            string page = dialogue.getCurrentString().Replace('^', '\n');
+            if (!string.IsNullOrWhiteSpace(page) && birthdayAttempt.DisplayedPages.LastOrDefault() != page)
+            {
+                birthdayAttempt.DisplayedPages.Add(page);
+                Monitor.Log($"DKQA actual birthday page {birthdayAttempt.DisplayedPages.Count}: {JsonSerializer.Serialize(page)}", LogLevel.Info);
+            }
         }
         catch (Exception ex)
         {
@@ -245,6 +292,10 @@ internal sealed partial class ModEntry
     private sealed record BirthdayAttempt(string FixtureId, string Sender, int CookiesBefore, JournalSnapshot JournalBefore, bool InventoryWasFull, Item[] ExistingDebris)
     {
         public string? ObservedPath { get; set; }
+        public DialogueBox? ObservedDialogue { get; set; }
+        public List<string> DisplayedPages { get; } = new();
+        public bool ExpectMultipage { get; init; }
+        public string? FinalDialogueText => DisplayedPages.Count == 0 ? null : string.Join("\n\n", DisplayedPages);
     }
 }
 

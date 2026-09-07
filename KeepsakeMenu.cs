@@ -20,26 +20,34 @@ internal sealed class KeepsakeMenu : IClickableMenu
     private readonly GiftJournal journal;
     private readonly Func<GiftEntry, string> formatNote;
     private readonly Func<string, string> senderName;
+    private readonly List<KeepsakeEntry> allEntries = new();
     private readonly List<KeepsakeEntry> entries = new();
+    private readonly List<string> originChoices = new();
+    private readonly List<string> senderChoices = new();
+    private readonly List<string> messagePages = new();
     private Rectangle listBounds;
     private Rectangle detailBounds;
-    private Rectangle removeBounds;
+    private Rectangle readBounds;
+    private Rectangle originBounds;
+    private Rectangle senderBounds;
     private Rectangle previousBounds;
     private Rectangle nextBounds;
-    private Rectangle confirmationBounds;
-    private Rectangle cancelBounds;
-    private Rectangle confirmBounds;
+    private Rectangle messageBounds;
+    private Rectangle messagePreviousBounds;
+    private Rectangle messageNextBounds;
+    private Rectangle backBounds;
     private int selectedIndex = -1;
     private int firstVisibleIndex;
     private int visibleRows;
     private int rowHeight = RowHeight;
     private bool compactLayout;
-    private bool removeFocused;
-    private bool confirmFocused;
-    private string? pendingRemoval;
+    private FilterFocus filterFocus;
+    private string originFilter = "";
+    private string senderFilter = "";
+    private KeepsakeEntry? messageEntry;
+    private int messagePage;
     private string hoverText = "";
     private int displayedRevision = int.MinValue;
-    private double statusMilliseconds;
 
     public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName)
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
@@ -63,22 +71,27 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
         int columnWidth = (width - 88) * 45 / 100;
         rowHeight = RowHeight;
-        visibleRows = Math.Max(1, (height - (compactLayout ? 224 : 276)) / rowHeight);
-        listBounds = new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 128 : 150), columnWidth, visibleRows * rowHeight);
-        detailBounds = new Rectangle(listBounds.Right + 24, yPositionOnScreen + (compactLayout ? 112 : 120), width - columnWidth - 88, height - (compactLayout ? 186 : 204));
-        removeBounds = new Rectangle(detailBounds.X + 20, detailBounds.Bottom - (compactLayout ? 52 : 68), detailBounds.Width - 40, compactLayout ? 38 : 48);
-        previousBounds = new Rectangle(listBounds.X, yPositionOnScreen + height - (compactLayout ? 88 : 116), 48, compactLayout ? 36 : 40);
+        int contentTop = yPositionOnScreen + (compactLayout ? 160 : 190);
+        int actionTop = yPositionOnScreen + height - (compactLayout ? 88 : 116);
+        visibleRows = Math.Max(1, (actionTop - contentTop) / rowHeight);
+        listBounds = new Rectangle(xPositionOnScreen + 32, contentTop, columnWidth, visibleRows * rowHeight);
+        detailBounds = new Rectangle(listBounds.Right + 24, contentTop, width - columnWidth - 88, actionTop - contentTop - 16);
+        readBounds = new Rectangle(detailBounds.X, actionTop, detailBounds.Width, 48);
+        previousBounds = new Rectangle(listBounds.X, actionTop, 48, 48);
         nextBounds = new Rectangle(listBounds.Right - 48, previousBounds.Y, 48, previousBounds.Height);
-
-        int confirmationWidth = Math.Min(600, width - 64);
-        confirmationBounds = new Rectangle(xPositionOnScreen + (width - confirmationWidth) / 2, yPositionOnScreen + (height - 282) / 2, confirmationWidth, 282);
-        int buttonWidth = (confirmationWidth - 72) / 2;
-        cancelBounds = new Rectangle(confirmationBounds.X + 24, confirmationBounds.Bottom - 76, buttonWidth, 48);
-        confirmBounds = new Rectangle(cancelBounds.Right + 24, cancelBounds.Y, buttonWidth, 48);
+        int filterWidth = (width - 88) / 2;
+        originBounds = new Rectangle(listBounds.X, yPositionOnScreen + (compactLayout ? 106 : 120), filterWidth, 44);
+        senderBounds = new Rectangle(originBounds.Right + 24, originBounds.Y, filterWidth, 44);
+        messageBounds = new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 146 : 164), width - 64,
+            actionTop - yPositionOnScreen - (compactLayout ? 162 : 180));
+        messagePreviousBounds = new Rectangle(messageBounds.X, actionTop, 48, 48);
+        messageNextBounds = new Rectangle(messageBounds.Right - 48, actionTop, 48, 48);
+        backBounds = new Rectangle(xPositionOnScreen + (width - 160) / 2, actionTop, 160, 48);
 
         if (upperRightCloseButton != null)
             upperRightCloseButton.bounds = new Rectangle(xPositionOnScreen + width - 24, yPositionOnScreen - 8, 48, 48);
         EnsureSelectionVisible();
+        RebuildMessagePages();
     }
 
     private void RefreshEntries()
@@ -87,26 +100,90 @@ internal sealed class KeepsakeMenu : IClickableMenu
             return;
 
         string? selectedId = SelectedEntry?.Entry.Id;
-        int previousIndex = selectedIndex;
-        Dictionary<string, KeepsakeEntry> previousEntries = entries.ToDictionary(entry => entry.Entry.Id);
-        entries.Clear();
+        Dictionary<string, KeepsakeEntry> previousEntries = allEntries.ToDictionary(entry => entry.Entry.Id);
+        allEntries.Clear();
         foreach (GiftEntry entry in journal.Entries.Reverse())
         {
-            entries.Add(previousEntries.TryGetValue(entry.Id, out KeepsakeEntry? previous) && previous.Entry == entry
+            allEntries.Add(previousEntries.TryGetValue(entry.Id, out KeepsakeEntry? previous) && previous.Entry == entry
                 ? previous
                 : CreatePreview(entry));
         }
         displayedRevision = journal.Revision;
 
+        if (originFilter.Length > 0 && !allEntries.Any(entry => entry.Entry.Origin == originFilter))
+            originFilter = "";
+        if (senderFilter.Length > 0 && !allEntries.Any(entry => entry.Entry.SenderId == senderFilter
+            && (originFilter.Length == 0 || entry.Entry.Origin == originFilter)))
+            senderFilter = "";
+        ApplyFilters(selectedId);
+
+        if (messageEntry != null)
+        {
+            KeepsakeEntry? current = allEntries.Find(entry => entry.Entry.Id == messageEntry.Entry.Id);
+            if (current != messageEntry)
+            {
+                messageEntry = current;
+                RebuildMessagePages();
+            }
+        }
+    }
+
+    private void ApplyFilters(string? selectedId)
+    {
+        int previousIndex = selectedIndex;
+        entries.Clear();
+        entries.AddRange(allEntries.Where(entry => (originFilter.Length == 0 || entry.Entry.Origin == originFilter)
+            && (senderFilter.Length == 0 || entry.Entry.SenderId == senderFilter)));
         selectedIndex = selectedId == null ? -1 : entries.FindIndex(entry => entry.Entry.Id == selectedId);
         if (selectedIndex < 0 && entries.Count > 0)
             selectedIndex = Math.Clamp(previousIndex, 0, entries.Count - 1);
-
-        if (pendingRemoval != null && SelectedEntry?.Entry.Id != pendingRemoval)
-            CancelRemoval();
-        if (entries.Count == 0)
-            removeFocused = false;
         EnsureSelectionVisible();
+
+        originChoices.Clear();
+        originChoices.Add("");
+        originChoices.AddRange(new[] { "mail", "birthday", "spouse", "other" }.Where(origin =>
+            allEntries.Any(entry => entry.Entry.Origin == origin && (senderFilter.Length == 0 || entry.Entry.SenderId == senderFilter))));
+        senderChoices.Clear();
+        senderChoices.Add("");
+        senderChoices.AddRange(allEntries.Where(entry => originFilter.Length == 0 || entry.Entry.Origin == originFilter)
+            .Select(entry => entry.Entry.SenderId).Distinct(StringComparer.Ordinal)
+            .OrderBy(senderName, StringComparer.CurrentCulture).ThenBy(id => id, StringComparer.Ordinal));
+        hoverText = "";
+    }
+
+    private void CycleFilter(FilterFocus focus, int direction)
+    {
+        filterFocus = focus;
+        List<string> choices = focus == FilterFocus.Occasion ? originChoices : senderChoices;
+        if (choices.Count < 2)
+            return;
+        string current = focus == FilterFocus.Occasion ? originFilter : senderFilter;
+        string next = choices[(choices.IndexOf(current) + direction + choices.Count) % choices.Count];
+        string? selectedId = SelectedEntry?.Entry.Id;
+        if (focus == FilterFocus.Occasion)
+            originFilter = next;
+        else
+            senderFilter = next;
+        ApplyFilters(selectedId);
+        Game1.playSound("smallSelect");
+    }
+
+    private string OccasionName(string origin) => i18n.Get("menu.occasion." + origin).ToString();
+
+    private string FilterLabel(FilterFocus focus)
+    {
+        string value = focus == FilterFocus.Occasion ? originFilter : senderFilter;
+        string label = value.Length == 0 ? i18n.Get("menu.filter.all").ToString()
+            : focus == FilterFocus.Occasion ? OccasionName(value) : senderName(value);
+        return i18n.Get(focus == FilterFocus.Occasion ? "menu.filter.occasion" : "menu.filter.sender", new { value = label }).ToString();
+    }
+
+    private string OccasionAndSource(GiftEntry entry)
+    {
+        string occasion = OccasionName(entry.Origin);
+        return entry.SourceModId == "Omegasis.HappyBirthday"
+            ? i18n.Get("menu.occasion-source", new { occasion, source = "Happy Birthday" }).ToString()
+            : occasion;
     }
 
     private static KeepsakeEntry CreatePreview(GiftEntry entry)
@@ -152,6 +229,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     private void Select(int index)
     {
+        filterFocus = FilterFocus.None;
         if (entries.Count == 0)
             return;
         int nextIndex = Math.Clamp(index, 0, entries.Count - 1);
@@ -160,44 +238,84 @@ internal sealed class KeepsakeMenu : IClickableMenu
             selectedIndex = nextIndex;
             Game1.playSound("smallSelect");
         }
-        removeFocused = false;
         EnsureSelectionVisible();
     }
 
-    private void BeginRemoval()
+    private void OpenMessage()
     {
         RefreshEntries();
         if (SelectedEntry is not { } selected)
             return;
-        pendingRemoval = selected.Entry.Id;
-        confirmFocused = false;
+        messageEntry = selected;
+        messagePage = 0;
+        RebuildMessagePages();
         hoverText = "";
         Game1.playSound("smallSelect");
     }
 
-    private void CancelRemoval()
+    private void CloseMessage()
     {
-        pendingRemoval = null;
-        confirmFocused = false;
+        messageEntry = null;
+        messagePages.Clear();
+        messagePage = 0;
+        hoverText = "";
+        filterFocus = FilterFocus.None;
     }
 
-    private void ConfirmRemoval()
+    private void ChangeMessagePage(int direction)
     {
-        string? id = pendingRemoval;
-        CancelRemoval();
-
-        if (id != null && journal.Remove(id))
+        int next = Math.Clamp(messagePage + direction, 0, Math.Max(0, messagePages.Count - 1));
+        if (next != messagePage)
         {
-            statusMilliseconds = 4000;
+            messagePage = next;
             Game1.playSound("smallSelect");
         }
-        RefreshEntries();
+    }
+
+    private void RebuildMessagePages()
+    {
+        messagePages.Clear();
+        if (messageEntry is null)
+            return;
+
+        string? storedText = messageEntry.Entry.MessageText;
+        string text = string.IsNullOrWhiteSpace(storedText)
+            ? i18n.Get("menu.message-missing").ToString()
+            : storedText;
+        int textWidth = Math.Max(1, messageBounds.Width - 40);
+        int linesPerPage = Math.Max(1, (messageBounds.Height - 32) / Game1.smallFont.LineSpacing);
+        List<string> lines = new();
+        foreach (string wrapped in Game1.parseText(text, Game1.smallFont, textWidth).Replace("\r", "").Split('\n'))
+        {
+            string remaining = wrapped;
+            // Long words must remain readable too, without shrinking or losing stored text.
+            while (remaining.Length > 1 && Game1.smallFont.MeasureString(remaining).X > textWidth)
+            {
+                int lower = 1;
+                int upper = remaining.Length;
+                while (lower < upper)
+                {
+                    int middle = (lower + upper + 1) / 2;
+                    if (Game1.smallFont.MeasureString(remaining[..middle]).X <= textWidth)
+                        lower = middle;
+                    else
+                        upper = middle - 1;
+                }
+                if (lower > 1 && char.IsHighSurrogate(remaining[lower - 1]))
+                    lower--;
+                lines.Add(remaining[..lower]);
+                remaining = remaining[lower..];
+            }
+            lines.Add(remaining);
+        }
+        for (int first = 0; first < lines.Count; first += linesPerPage)
+            messagePages.Add(string.Join("\n", lines.Skip(first).Take(linesPerPage)));
+        messagePage = Math.Clamp(messagePage, 0, Math.Max(0, messagePages.Count - 1));
     }
 
     public override void update(GameTime time)
     {
         base.update(time);
-        statusMilliseconds = Math.Max(0, statusMilliseconds - time.ElapsedGameTime.TotalMilliseconds);
         RefreshEntries();
     }
 
@@ -210,18 +328,29 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
         RefreshEntries();
-        if (pendingRemoval != null)
-        {
-            if (cancelBounds.Contains(x, y))
-                CancelRemoval();
-            else if (confirmBounds.Contains(x, y))
-                ConfirmRemoval();
-            return;
-        }
-
         if (upperRightCloseButton?.containsPoint(x, y) == true)
         {
             exitThisMenu();
+            return;
+        }
+        if (messageEntry != null)
+        {
+            if (backBounds.Contains(x, y))
+                CloseMessage();
+            else if (messagePreviousBounds.Contains(x, y))
+                ChangeMessagePage(-1);
+            else if (messageNextBounds.Contains(x, y))
+                ChangeMessagePage(1);
+            return;
+        }
+        if (originBounds.Contains(x, y))
+        {
+            CycleFilter(FilterFocus.Occasion, 1);
+            return;
+        }
+        if (senderBounds.Contains(x, y))
+        {
+            CycleFilter(FilterFocus.Sender, 1);
             return;
         }
         for (int row = 0; row < visibleRows && firstVisibleIndex + row < entries.Count; row++)
@@ -232,8 +361,8 @@ internal sealed class KeepsakeMenu : IClickableMenu
                 return;
             }
         }
-        if (removeBounds.Contains(x, y))
-            BeginRemoval();
+        if (readBounds.Contains(x, y))
+            OpenMessage();
         else if (entries.Count > visibleRows && firstVisibleIndex > 0 && previousBounds.Contains(x, y))
             Select(selectedIndex - visibleRows);
         else if (entries.Count > visibleRows && firstVisibleIndex + visibleRows < entries.Count && nextBounds.Contains(x, y))
@@ -242,13 +371,19 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     public override void receiveRightClick(int x, int y, bool playSound = true)
     {
-        if (pendingRemoval != null)
-            CancelRemoval();
+        if (messageEntry != null)
+            CloseMessage();
+        else if (originBounds.Contains(x, y))
+            CycleFilter(FilterFocus.Occasion, -1);
+        else if (senderBounds.Contains(x, y))
+            CycleFilter(FilterFocus.Sender, -1);
     }
 
     public override void receiveScrollWheelAction(int direction)
     {
-        if (pendingRemoval == null)
+        if (messageEntry != null)
+            ChangeMessagePage(direction > 0 ? -1 : 1);
+        else
             Select(selectedIndex + (direction > 0 ? -1 : 1));
     }
 
@@ -263,23 +398,22 @@ internal sealed class KeepsakeMenu : IClickableMenu
         bool activate = key is Keys.Enter or Keys.Space || Game1.options.actionButton.Any(button => button.key == key);
         bool left = key == Keys.Left || Game1.options.moveLeftButton.Any(button => button.key == key);
         bool right = key == Keys.Right || Game1.options.moveRightButton.Any(button => button.key == key);
+        bool up = key == Keys.Up || Game1.options.moveUpButton.Any(button => button.key == key);
+        bool down = key == Keys.Down || Game1.options.moveDownButton.Any(button => button.key == key);
+        bool previousChoice = Game1.options.useToolButton.Any(button => button.key == key);
 
-        if (pendingRemoval != null)
+        if (messageEntry != null)
         {
             if (cancel)
-                CancelRemoval();
-            else if (left || right || key == Keys.Tab)
-            {
-                confirmFocused = key == Keys.Tab ? !confirmFocused : right;
-                Game1.playSound("smallSelect");
-            }
-            else if (activate)
-            {
-                if (confirmFocused)
-                    ConfirmRemoval();
-                else
-                    CancelRemoval();
-            }
+                CloseMessage();
+            else if (left || up || key == Keys.PageUp)
+                ChangeMessagePage(-1);
+            else if (right || down || activate || key == Keys.PageDown)
+                ChangeMessagePage(1);
+            else if (key == Keys.Home)
+                ChangeMessagePage(-messagePages.Count);
+            else if (key == Keys.End)
+                ChangeMessagePage(messagePages.Count);
             return;
         }
 
@@ -288,30 +422,32 @@ internal sealed class KeepsakeMenu : IClickableMenu
             exitThisMenu();
             return;
         }
-        if (key == Keys.Up || Game1.options.moveUpButton.Any(button => button.key == key))
+        if (up)
         {
             Select(selectedIndex - 1);
             return;
         }
-        if (key == Keys.Down || Game1.options.moveDownButton.Any(button => button.key == key))
+        if (down)
         {
             Select(selectedIndex + 1);
             return;
         }
         if (left || right)
         {
-            removeFocused = right && entries.Count > 0;
+            filterFocus = right ? FilterFocus.Sender : FilterFocus.Occasion;
             return;
         }
-        if (key == Keys.Delete || Game1.options.useToolButton.Any(button => button.key == key))
+        if (previousChoice && filterFocus != FilterFocus.None)
         {
-            BeginRemoval();
+            CycleFilter(filterFocus, -1);
             return;
         }
         if (activate)
         {
-            if (removeFocused)
-                BeginRemoval();
+            if (filterFocus == FilterFocus.None)
+                OpenMessage();
+            else
+                CycleFilter(filterFocus, 1);
             return;
         }
 
@@ -330,7 +466,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
                 Select(entries.Count - 1);
                 break;
             case Keys.Tab:
-                removeFocused = entries.Count > 0 && !removeFocused;
+                filterFocus = (FilterFocus)(((int)filterFocus + 1) % 3);
                 break;
             default:
                 base.receiveKeyPress(key);
@@ -341,16 +477,19 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void receiveGamePadButton(Buttons button)
     {
         // Only shoulder paging is unmapped. All other controls use receiveKeyPress once.
-        if (pendingRemoval != null)
-            return;
-
         switch (button)
         {
             case Buttons.LeftShoulder:
-                Select(selectedIndex - visibleRows);
+                if (messageEntry != null)
+                    ChangeMessagePage(-1);
+                else
+                    Select(selectedIndex - visibleRows);
                 break;
             case Buttons.RightShoulder:
-                Select(selectedIndex + visibleRows);
+                if (messageEntry != null)
+                    ChangeMessagePage(1);
+                else
+                    Select(selectedIndex + visibleRows);
                 break;
         }
     }
@@ -360,9 +499,17 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void performHoverAction(int x, int y)
     {
         hoverText = "";
-        if (pendingRemoval != null)
-            return;
         upperRightCloseButton?.tryHover(x, y);
+        if (messageEntry != null)
+            return;
+        if (originBounds.Contains(x, y) || senderBounds.Contains(x, y))
+        {
+            FilterFocus focus = originBounds.Contains(x, y) ? FilterFocus.Occasion : FilterFocus.Sender;
+            hoverText = FilterLabel(focus) + "\n" + i18n.Get("menu.filter-hint");
+            if (focus == FilterFocus.Sender && senderFilter.Length > 0)
+                hoverText += "\n" + senderFilter;
+            return;
+        }
         for (int row = 0; row < visibleRows && firstVisibleIndex + row < entries.Count; row++)
         {
             if (!RowBounds(row).Contains(x, y))
@@ -371,27 +518,41 @@ internal sealed class KeepsakeMenu : IClickableMenu
             hoverText = ItemText(entry) + "\n" + formatNote(entry.Entry);
             return;
         }
-        if (removeBounds.Contains(x, y) && SelectedEntry != null)
-            hoverText = i18n.Get("menu.remove-hint").ToString();
+        if (readBounds.Contains(x, y) && SelectedEntry != null)
+            hoverText = i18n.Get("menu.read-hint").ToString();
     }
 
     public override void draw(SpriteBatch b)
     {
         b.Draw(Game1.fadeToBlackRect, new Rectangle(0, 0, Game1.uiViewport.Width, Game1.uiViewport.Height), Color.Black * 0.45f);
         DrawBox(b, new Rectangle(xPositionOnScreen, yPositionOnScreen, width, height));
+        if (messageEntry != null)
+            DrawMessage(b);
+        else
+            DrawArchive(b);
+        upperRightCloseButton?.draw(b);
+        if (hoverText.Length > 0 && messageEntry is null)
+            drawHoverText(b, hoverText, Game1.smallFont);
+        drawMouse(b);
+    }
 
+    private void DrawArchive(SpriteBatch b)
+    {
         b.DrawString(Game1.dialogueFont, i18n.Get("menu.title").ToString(), new Vector2(xPositionOnScreen + 36, yPositionOnScreen + (compactLayout ? 18 : 28)), Game1.textColor);
-        b.DrawString(Game1.smallFont, FitText(i18n.Get("menu.subtitle").ToString(), Game1.smallFont, width - 76), new Vector2(xPositionOnScreen + 38, yPositionOnScreen + (compactLayout ? 62 : 75)), MutedText);
+        string collection = i18n.Get(originFilter.Length > 0 || senderFilter.Length > 0 ? "menu.collection-filtered" : "menu.collection",
+            new { count = entries.Count, total = allEntries.Count }).ToString();
+        b.DrawString(Game1.smallFont, FitText(collection, Game1.smallFont, width - 76), new Vector2(xPositionOnScreen + 38, yPositionOnScreen + (compactLayout ? 62 : 75)), MutedText);
         DrawRule(b, new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 94 : 108), width - 64, 2));
+        DrawButton(b, originBounds, FilterLabel(FilterFocus.Occasion), filterFocus == FilterFocus.Occasion, originChoices.Count > 1);
+        DrawButton(b, senderBounds, FilterLabel(FilterFocus.Sender), filterFocus == FilterFocus.Sender, senderChoices.Count > 1);
 
         if (entries.Count == 0)
             DrawEmptyState(b);
         else
         {
-            string collection = i18n.Get("menu.collection", new { count = entries.Count }).ToString();
-            b.DrawString(Game1.smallFont, FitText(collection, Game1.smallFont, listBounds.Width), new Vector2(listBounds.X + 4, yPositionOnScreen + (compactLayout ? 102 : 120)), MutedText);
             DrawRows(b);
             DrawDetails(b);
+            DrawButton(b, readBounds, i18n.Get("menu.read").ToString(), filterFocus == FilterFocus.None);
             if (entries.Count > visibleRows)
             {
                 DrawButton(b, previousBounds, "<", false, firstVisibleIndex > 0);
@@ -401,15 +562,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             }
         }
 
-        string footer = i18n.Get(statusMilliseconds > 0 ? "menu.removed" : compactLayout ? "menu.help-compact" : "menu.help").ToString();
-        b.DrawString(Game1.smallFont, FitText(footer, Game1.smallFont, width - 72), new Vector2(xPositionOnScreen + 36, yPositionOnScreen + height - (compactLayout ? 37 : 49)), statusMilliseconds > 0 ? new Color(62, 107, 69) : MutedText);
-        upperRightCloseButton?.draw(b);
-
-        if (pendingRemoval != null)
-            DrawConfirmation(b);
-        else if (hoverText.Length > 0)
-            drawHoverText(b, hoverText, Game1.smallFont);
-        drawMouse(b);
+        DrawFooter(b, filterFocus != FilterFocus.None ? "menu.help-filter" : compactLayout ? "menu.help-compact" : "menu.help");
     }
 
     private void DrawRows(SpriteBatch b)
@@ -421,7 +574,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             Rectangle bounds = RowBounds(row);
             bool selected = index == selectedIndex;
             DrawBox(b, bounds, selected ? Highlight : Color.White);
-            if (selected && !removeFocused)
+            if (selected && filterFocus == FilterFocus.None)
                 b.Draw(Game1.staminaRect, new Rectangle(bounds.X + 9, bounds.Y + 12, 6, bounds.Height - 24), new Color(62, 107, 69));
 
             DrawPreview(b, entry, new Vector2(bounds.X + 16, bounds.Y + 5), compactLayout ? 0.75f : 0.9f);
@@ -437,16 +590,16 @@ internal sealed class KeepsakeMenu : IClickableMenu
         if (SelectedEntry is not { } entry)
             return;
         DrawBox(b, detailBounds);
-        DrawPreview(b, entry, new Vector2(detailBounds.X + 22, detailBounds.Y + (compactLayout ? 12 : 18)), 1f);
-        int textX = detailBounds.X + 100;
-        int textWidth = detailBounds.Width - 120;
-        b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 17 : 25)), Game1.textColor);
+        DrawPreview(b, entry, new Vector2(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 12 : 18)), compactLayout ? 0.75f : 1f);
+        int textX = detailBounds.X + (compactLayout ? 82 : 100);
+        int textWidth = detailBounds.Right - textX - 20;
+        b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 12 : 25)), Game1.textColor);
         string from = i18n.Get("menu.from", new { sender = senderName(entry.Entry.SenderId) }).ToString();
-        b.DrawString(Game1.smallFont, FitText(from, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 48 : 56)), MutedText);
-        DrawRule(b, new Rectangle(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 87 : 101), detailBounds.Width - 40, 2));
+        b.DrawString(Game1.smallFont, FitText(from, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 43 : 56)), MutedText);
+        DrawRule(b, new Rectangle(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 81 : 101), detailBounds.Width - 40, 2));
 
         int noteX = detailBounds.X + 24;
-        int noteY = detailBounds.Y + (compactLayout ? 98 : 123);
+        int noteY = detailBounds.Y + (compactLayout ? 91 : 123);
         if (!compactLayout && Game1.getCharacterFromName(entry.Entry.SenderId, false) is { Portrait: { } portrait })
         {
             b.Draw(portrait, new Rectangle(noteX, noteY, 96, 96), new Rectangle(0, 0, 64, 64), Color.White);
@@ -456,14 +609,13 @@ internal sealed class KeepsakeMenu : IClickableMenu
         int noteWidth = detailBounds.Right - noteX - 24;
         string date = FitText(DateText(entry.Entry), Game1.smallFont, noteWidth);
         b.DrawString(Game1.smallFont, date, new Vector2(noteX, noteY), MutedText);
-        string occasion = i18n.Get(entry.Entry.Origin == "birthday" ? "menu.occasion.birthday" : "menu.occasion.mail").ToString();
+        string occasion = compactLayout ? OccasionAndSource(entry.Entry) : OccasionName(entry.Entry.Origin);
         b.DrawString(Game1.smallFont, FitText(occasion, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 32), MutedText);
-        if (entry.Entry.SourceModId == "Omegasis.HappyBirthday")
+        if (!compactLayout && entry.Entry.SourceModId == "Omegasis.HappyBirthday")
         {
             string provider = i18n.Get("note.provider", new { name = "Happy Birthday" }).ToString();
             b.DrawString(Game1.smallFont, FitText(provider, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 64), MutedText);
         }
-        DrawButton(b, removeBounds, i18n.Get("menu.remove").ToString(), removeFocused);
     }
 
     private static void DrawPreview(SpriteBatch b, KeepsakeEntry entry, Vector2 position, float scale)
@@ -476,7 +628,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     private void DrawEmptyState(SpriteBatch b)
     {
-        Rectangle titleBounds = new(xPositionOnScreen + 48, yPositionOnScreen + height / 2 - 90, width - 96, 60);
+        Rectangle titleBounds = new(xPositionOnScreen + 48, listBounds.Y + (compactLayout ? 6 : 46), width - 96, 50);
         DrawCentered(b, i18n.Get("menu.empty-title").ToString(), Game1.dialogueFont, titleBounds, Game1.textColor);
         int textWidth = Math.Min(620, width - 128);
         string text = Game1.parseText(i18n.Get("menu.empty-body").ToString(), Game1.smallFont, textWidth);
@@ -484,16 +636,33 @@ internal sealed class KeepsakeMenu : IClickableMenu
         b.DrawString(Game1.smallFont, text, new Vector2(xPositionOnScreen + (width - size.X) / 2, titleBounds.Bottom + 8), MutedText);
     }
 
-    private void DrawConfirmation(SpriteBatch b)
+    private void DrawMessage(SpriteBatch b)
     {
-        b.Draw(Game1.fadeToBlackRect, new Rectangle(0, 0, Game1.uiViewport.Width, Game1.uiViewport.Height), Color.Black * 0.5f);
-        DrawBox(b, confirmationBounds);
-        b.DrawString(Game1.dialogueFont, i18n.Get("menu.confirm-title").ToString(), new Vector2(confirmationBounds.X + 28, confirmationBounds.Y + 28), Game1.textColor);
-        string explanation = Game1.parseText(i18n.Get("menu.confirm-body").ToString(), Game1.smallFont, confirmationBounds.Width - 56);
-        b.DrawString(Game1.smallFont, explanation, new Vector2(confirmationBounds.X + 28, confirmationBounds.Y + 89), MutedText);
-        DrawButton(b, cancelBounds, i18n.Get("menu.cancel").ToString(), !confirmFocused);
-        DrawButton(b, confirmBounds, i18n.Get("menu.remove").ToString(), confirmFocused);
+        if (messageEntry is not { } entry)
+            return;
+        string title = i18n.Get("menu.message-title", new { sender = senderName(entry.Entry.SenderId) }).ToString();
+        b.DrawString(Game1.dialogueFont, FitText(title, Game1.dialogueFont, width - 76),
+            new Vector2(xPositionOnScreen + 36, yPositionOnScreen + (compactLayout ? 18 : 28)), Game1.textColor);
+        b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, width - 76),
+            new Vector2(xPositionOnScreen + 38, yPositionOnScreen + (compactLayout ? 62 : 75)), MutedText);
+        string context = DateText(entry.Entry) + " | " + OccasionAndSource(entry.Entry);
+        b.DrawString(Game1.smallFont, FitText(context, Game1.smallFont, width - 76),
+            new Vector2(xPositionOnScreen + 38, yPositionOnScreen + (compactLayout ? 98 : 112)), MutedText);
+        DrawBox(b, messageBounds);
+        if (messagePages.Count > 0)
+            b.DrawString(Game1.smallFont, messagePages[messagePage], new Vector2(messageBounds.X + 20, messageBounds.Y + 16), Game1.textColor);
+        DrawButton(b, messagePreviousBounds, "<", false, messagePage > 0);
+        DrawButton(b, messageNextBounds, ">", false, messagePage + 1 < messagePages.Count);
+        DrawButton(b, backBounds, i18n.Get("menu.back").ToString(), false);
+        string page = i18n.Get("menu.message-page", new { current = messagePage + 1, total = messagePages.Count }).ToString();
+        DrawCentered(b, page, Game1.smallFont,
+            new Rectangle(messagePreviousBounds.Right + 12, backBounds.Y, backBounds.Left - messagePreviousBounds.Right - 24, backBounds.Height), MutedText);
+        DrawFooter(b, "menu.help-message");
     }
+
+    private void DrawFooter(SpriteBatch b, string key) => b.DrawString(Game1.smallFont,
+        FitText(i18n.Get(key).ToString(), Game1.smallFont, width - 72),
+        new Vector2(xPositionOnScreen + 36, yPositionOnScreen + height - (compactLayout ? 37 : 49)), MutedText);
 
     private static void DrawBox(SpriteBatch b, Rectangle bounds, Color? tint = null) => drawTextureBox(b, bounds.X, bounds.Y, bounds.Width, bounds.Height, tint ?? Color.White);
 
@@ -525,4 +694,6 @@ internal sealed class KeepsakeMenu : IClickableMenu
     }
 
     private sealed record KeepsakeEntry(GiftEntry Entry, Item? Preview, string DisplayName);
+
+    private enum FilterFocus { None, Occasion, Sender }
 }

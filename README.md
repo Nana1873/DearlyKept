@@ -6,9 +6,8 @@ Eat Mom's cookies. Put a friend's parcel away for later. Dearly Kept remembers
 the gift in a separate journal: who gave it, what it was, how many you received,
 and the in-game date and occasion. Press **K** to revisit those memories.
 
-Version **0.2.0** replaces the internal item-note prototype with a persistent
-journal. Gameplay acceptance for this new version is still pending; see the
-version-specific scope in [validation](docs/validation.md).
+The tested runtime and current acceptance scope are recorded in
+[validation](docs/validation.md).
 
 ## Features
 
@@ -17,6 +16,9 @@ version-specific scope in [validation](docs/validation.md).
 - Leaves item stacking and inventory space unchanged.
 - Opens a standalone menu with item previews, sender names, available portraits,
   quantities, dates, and occasions. Newest entries appear first.
+- Filters memories by occasion and sender, offering only choices with entries.
+- Keeps the actual gift letter or displayed birthday dialogue for later reading
+  in a separate, paginated message view.
 - Saves the journal separately for each save during the game's regular save.
 - Supports keyboard, mouse, and controller navigation, with English and German
   text. Other languages fall back to English.
@@ -32,10 +34,13 @@ Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**.
    console, to open your journal.
 
 No other mod is required for vanilla gift mail. Gifts remain ordinary items:
-they can stack together and do not need to stay in your backpack. The journal's
-**Delete entry** action asks for confirmation and deletes only that memory.
-New entries and deletions persist at the next regular game save; quitting
-without saving also discards that day's journal changes.
+they can stack together and do not need to stay in your backpack. Use the
+**Occasion** and **Sender** buttons to narrow the list, select a gift, and choose
+**Read message**. The archive is read-only.
+
+New memories persist at the next regular game save; quitting without saving
+also discards that day's journal changes. Older entries without message text
+remain readable and show a placeholder in the message view.
 
 ## Which gifts count?
 
@@ -51,8 +56,12 @@ See [mail support](docs/mail-support.md) for the included IDs and extension
 format. The journal records actual gifts, not money, invitations, or previews.
 Rereading a letter in Collections does not create another entry.
 
-Happy Birthday's spouse-party event is not supported. Ordinary vanilla spouse
-gifts, the Feast of the Winter Star, quest hand-ins, custom mail-framework menus,
+A supported ordinary letter from your current spouse appears under **Spouse**.
+Happy Birthday gifts retain the **Birthday** occasion, including gifts from
+your spouse. This classification does not add support for other delivery paths.
+
+Happy Birthday's spouse-party event is not supported. Direct vanilla spouse
+handoffs, the Feast of the Winter Star, quest hand-ins, custom mail-framework menus,
 and other gift mods are not captured automatically. Existing items and past
 gifts are not reconstructed.
 
@@ -89,7 +98,8 @@ imported nor modified, and they are not used to guess historical journal entries
 
 Other mods can read the loaded journal through the read-only SMAPI API methods
 `GetGiftCount()` and `GetGiftsJson()`. This API does not add, remove, or modify
-entries. See [the data and API reference](docs/mail-support.md#data-and-read-only-api).
+entries. Its JSON includes optional saved message text. See
+[the data and API reference](docs/mail-support.md#data-and-read-only-api).
 
 Build steps and acceptance cases: [CONTRIBUTING.md](CONTRIBUTING.md).
 Novelty and adjacent-mod research: [research notes](docs/novelty-research.md).

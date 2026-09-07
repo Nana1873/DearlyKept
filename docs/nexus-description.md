@@ -1,13 +1,13 @@
 # Dearly Kept — A Lasting Gift Journal
 
-Draft for 0.2.0. Journal gameplay acceptance is still pending; finish the
-candidate's validation before using this description for a public upload.
+Unreleased 0.2.0 description draft. Check the candidate's validation report before
+uploading; the current text-capture and archive UI acceptance is still pending.
 
 **Those cookies came from Mom. Now you can keep that little memory.**
 
 Dearly Kept keeps a gift journal with the sender, item, quantity, in-game date,
 and occasion. Press **K** to browse your memories with item previews and familiar
-villager portraits.
+villager portraits, filter by sender or occasion, and read the message again.
 
 You can eat the cookies. Store, sell, craft with, or give away the other gifts.
 Their memories remain in the journal, and the items stack and work as usual.
@@ -20,6 +20,8 @@ You do not have to keep anything in your backpack or set aside inventory space.
   parent gift mail, and belated birthday mail.
 - A separate journal menu with the newest memories first.
 - Sender, item, quantity, date, and occasion for each receipt.
+- Saved personalized letters and the birthday dialogue pages actually shown.
+- Available occasion and sender filters, plus a paginated message reader.
 - English and German translations.
 - Keyboard, mouse, and controller navigation.
 - No item tags, stacking changes, or required mod beyond SMAPI for vanilla mail.
@@ -36,8 +38,8 @@ gave you an old item or reconstruct past gifts. Each save has its own journal,
 saved when the game normally saves. Quitting without saving discards that day's
 journal changes too.
 
-The menu's **Delete entry** action asks for confirmation and removes only that
-journal entry. Your items are unaffected. `CaptureMailGifts` and
+The archive is read-only. Select a gift and choose **Read message**; older entries
+without saved text show a placeholder. `CaptureMailGifts` and
 `CaptureBirthdayGifts` can disable future recording without erasing your memories.
 Birthday mail needs both options enabled.
 
@@ -48,8 +50,12 @@ split-screen. Mod authors can extend the exact letter-to-sender dictionary
 through Content Patcher for the normal mail viewer. A read-only SMAPI API exposes
 `GetGiftCount()` and `GetGiftsJson()` for other mods.
 
+Supported ordinary mail from your current spouse appears under **Spouse**;
+birthday gifts remain under **Birthday**. Only categories with matching entries
+appear in the filter.
+
 Happy Birthday support is limited to exactly **3.21.4**. Its spouse-party event
-is not supported. Ordinary spouse gifts, Winter Star gifts, quest hand-ins,
+is not supported. Direct vanilla spouse handoffs, Winter Star gifts, quest hand-ins,
 custom mail-framework menus, and other gift mods are not captured automatically.
 
 Removing Dearly Kept leaves your items unchanged; its journal menu is unavailable
@@ -70,13 +76,13 @@ Stardew Valley.
 
 ## Upload preparation notes (remove this section before posting)
 
-- Short description: **A lasting gift journal with senders, items, quantities,
-  dates, and occasions. Use your gifts normally and keep the memory. EN/DE.**
+- Short description: **Remember gifts and their messages. Browse by sender or
+  occasion, read letters again, and use your gifts normally. English and German.**
 - Suggested category: User Interface; choose current applicable SMAPI/Quality of
   Life/1.6 compatibility tags in the upload form.
 - Lead screenshot: the journal with Mom and Evelyn entries.
-- Second screenshot: a saved memory after its gift has been consumed.
-- Optional third screenshot: the German journal or a supported birthday entry.
+- Second screenshot: the message reader showing an actual recorded letter.
+- Optional third screenshot: the German archive with an active filter.
 - Complete 0.2.0 journal acceptance and refresh the screenshots before uploading;
   the old item-tooltip screenshots describe the internal prototype.
 - Add the actual repository and Nexus update IDs only once those pages exist.

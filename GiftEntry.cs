@@ -13,16 +13,18 @@ public sealed record GiftEntry(
     string QualifiedItemId,
     string ItemName,
     int Quantity,
-    int Quality)
+    int Quality,
+    string? MessageText = null)
 {
     public bool IsValid() => Guid.TryParseExact(Id, "N", out _)
         && Text(SenderId, 128) && Text(SourceId, 512)
-        && Origin is "mail" or "birthday"
+        && Origin is "mail" or "birthday" or "spouse" or "other"
         && (SourceModId is null || Text(SourceModId, 256))
         && Year is >= 1 and <= 9999 && Day is >= 1 and <= 28
         && Season is "spring" or "summer" or "fall" or "winter"
         && Text(QualifiedItemId, 256) && Text(ItemName, 512)
-        && Quantity > 0 && Quality >= 0;
+        && Quantity > 0 && Quality >= 0
+        && (MessageText is null || MessageText.Length <= 16000);
 
     private static bool Text(string? value, int limit) => !string.IsNullOrWhiteSpace(value) && value.Length <= limit;
 }

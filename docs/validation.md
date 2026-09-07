@@ -1,39 +1,117 @@
 # Validation
 
-## Gift journal 0.2.0
+## Archive 0.2.0
 
-The 0.2.0 candidate replaces inventory-bound provenance with an independent,
-save-specific journal. Its gameplay and visual checks are being performed afresh;
-the older prototype evidence does not validate the new capture or persistence.
+Date: **2026-09-08**. Target runtime: Stardew Valley **1.6.15.24356**,
+SMAPI **4.5.2**, Windows x64. Build and the completed baseline game review used
+the installed **SDVKit 0.8.0** release.
 
-Date: **2026-09-08**. Installed tooling: **SDVKit 0.8.0**; target runtime:
-Stardew Valley **1.6.15.24356**, SMAPI **4.5.2**, Windows x64.
+The current archive candidate adds actual message text, occasion/sender filters,
+and a message reader. It removes entry deletion completely. Its package is
+`.sdvkit/evidence/archive/candidate-1.zip`, SHA-256:
 
-Completed so far:
+`0f3aa45625685f5567e02de0dc42a90671700051c6b3bf68453c842788df72fe`
 
-- SDVKit schema check passed for the manifest and English/German i18n.
-- Production build/package passed with zero warnings and zero errors.
-- All 47 independent journal model tests passed, including durable JSON data,
-  repeated callbacks, separate identical gifts, deletion and save separation.
+Completed checks for this candidate:
+
+- SDVKit schema validation passed for the manifest and English/German i18n.
+- Production package build passed with zero warnings and zero errors.
+- All **63** journal-model checks passed: independent receipt identities,
+  duplicate callback rejection, detached save snapshots, exact text and date
+  persistence, backward-compatible schema-1 records without text, and bounded
+  message enrichment without changing other receipt fields.
 - Package contains only the production DLL, manifest and two locale files.
-- Local game IL confirms the two observed letter methods hand attachments to
-  the farmer or overflow menu. Postfix observers run after successful return.
-- Happy Birthday hooks were checked against the author's exact source commit
-  `a36cbed260e7aedc311ec182b436dd331d39472a`, version 3.21.4.
+  Test harnesses and integration dependencies are not distributed.
+- English/German translation keys and placeholders match.
+- Installed game IL and the supported Happy Birthday source were checked for
+  text and delivery semantics. Message observers do not evaluate raw commands
+  or advance dialogue.
 
-The optional live dependency set is source-built Happy Birthday 3.21.4,
-source-built Stardust Core 3.1.1, Content Patcher 2.9.1 and the author's English
-content pack 2.0.4. Happy Birthday/Stardust Core source files match that commit;
-only build configuration was adjusted. These are **not verified Nexus release
-binaries**, so any live result applies to this documented source build.
-Provenance and hashes: `.sdvkit/integration-dependencies/README.md`.
+Evidence: `.sdvkit/logs/package.log`,
+`.sdvkit/tests/journal-core-build/results-archive.log`, and the JSON round trips
+under `.sdvkit/tests/journal-core-evidence/`.
 
-Pending: real mail and birthday receipt, preview exclusion, normal stacking,
-overflow, saved history after inventory removal and process restart, plus
-English/German journal controls and layout at 100%/150% UI scale.
+**Pending for the changed archive capabilities:** actual personalized text
+capture, birthday transcript capture, filters and reader controls/layout, and
+their persistence through a real save and process restart.
+
+## Completed journal baseline
+
+The immediately preceding 0.2.0 journal candidate was tested in the actual game
+before text capture and the new archive UI were added. These results establish
+the receipt and persistence baseline; they do not substitute for the changed
+archive capabilities above.
+
+Package `.sdvkit/evidence/journal/candidate-2.zip`, SHA-256:
+
+`993bf29ba41ddab561f9a3e58d9e2ca6fb1a4400708dad85be0793134b3ac552`
+
+Observed results:
+
+- Mom's actual Cookie attachment merged with ordinary Cookies. Opening the
+  letter alone created no memory; its real handoff created exactly one.
+- Clicking Evelyn's actual Bread attachment and then closing the letter
+  created one receipt. Repeated gifts from Mom remained separate receipts.
+- Collections replay did not create an attachment or a journal entry.
+- A full backpack used the real mail overflow menu; taking its attachment
+  did not create a second receipt.
+- Happy Birthday's real Evelyn greeting queued a Cookie, then delivered and
+  merged it once. An actual Content Patcher token preview produced neither
+  an item nor a journal entry.
+- Happy Birthday's actual Mom letter delivered one Pink Cake; Robin's belated
+  letter delivered 50 Wood. Their journal quantities and sources matched.
+- Happy Birthday's real Gus greeting with a full backpack provided Cookie
+  debris. Vanilla pickup did not create a duplicate journal entry.
+- Removing every inventory item from the verified disposable fixture left all
+  seven journal entries unchanged. These entries had actual delivery evidence;
+  the harness did not manufacture journal history.
+- Normal vanilla sleep raised SMAPI `Saved`. After stopping the process and
+  restarting the same fixture **without Happy Birthday or its dependencies**,
+  the complete journal JSON and empty inventory matched their checkpoint.
+- Native journal screenshots were visually inspected in English at 100% UI
+  scale and German at 100% and 150%. These screenshots show the previous UI.
+
+The controlled fixture was `c5913bb5d67f4f8c8e82dfc3036ef040`.
+The first game launch was `ab288caf65724cba8c0027d0ff9b57c5` (PID 44832);
+the restart was `f2dd3e1e71a34b77abea209e5e5e3c2c` (PID 47716).
+Target build identity for both:
+`sha256:168a302f3da6eae70f9c4af74f510098d92ab5ddade7306069dbdc9c88bc6650`.
+
+Evidence is under `.sdvkit/evidence/journal/`: `run-1-smapi.log`,
+`run-2-smapi.log`, `run-1-checkpoint.json`, launch/status/stop JSON, screenshots,
+and `final-reset-before-text.json`. Both owned processes were stopped through
+the public CLI; the final reset reported `fixtureReset=true`,
+`stagingRemoved=true`, and no problems. Normal saves and normal Mods were not used.
+
+## Integration provenance and limits
+
+The optional dependency set is source-built Happy Birthday **3.21.4**,
+source-built Stardust Core **3.1.1**, Content Patcher **2.9.1**, and the author's
+English content pack **2.0.4**. Happy Birthday/Stardust Core source files match
+author commit `a36cbed260e7aedc311ec182b436dd331d39472a`; only local build
+configuration was adjusted. These are **not verified Nexus release binaries**,
+so live results apply to this documented source build. Provenance and hashes
+are in `.sdvkit/integration-dependencies/README.md`.
+
+Happy Birthday creates stock JSON under a `Configs` subdirectory on startup.
+SDVKit 0.8.0 treats those new paths as staging drift. The tested review input
+includes the exact stock files from a startup probe. Happy Birthday's ordinary
+per-player `data` writes at day end still trigger that guard. After the actual
+`Saved` event, the public CLI stop succeeded and removed staging. This is not a
+claim that all SDVKit review queries remain available after those writes.
+
+Happy Birthday also logged parent-token warnings before the world loaded;
+its actual later parent-letter delivery passed. A few harness commands were
+rejected while a native gift popup was still open, then retried after actual
+input closed it. These are recorded in the full logs, not hidden as clean runs.
+
+The separate Happy Birthday spouse-party path, direct vanilla spouse gifts,
+other gift mods, multiplayer and split-screen have no acceptance claim.
+The source/API assessment is distinct from actual game behavior, and build
+success is distinct from visual acceptance. No download count or absolute
+novelty has been verified.
 
 ## Earlier prototype
 
-[The 0.1.0 evidence](validation-0.1.0.md) is retained for the previous item-note
-prototype. Its archive is unchanged. It is not a release acceptance result for
-0.2.0.
+[The 0.1.0 evidence](validation-0.1.0.md) is retained for the older item-note
+prototype. Its archive is unchanged and does not establish 0.2.0 behavior.

@@ -6,6 +6,15 @@ their stacks, then records the handoff in a separate gift journal. It skips
 Collections replays and recovered items that have already been in an inventory.
 Opening a preview alone does not create a memory.
 
+For supported letters, the archive stores the viewer's complete personalized
+message by concatenating its prepared text pages. The game's `^` line breaks
+become newlines; the archive does not rerun mail commands. An ordinary mapped
+letter is classified as `spouse` when its resolved sender matches
+`Game1.player.spouse` at receipt. Happy Birthday classification takes priority
+and remains `birthday`.
+This labels already supported mail; direct vanilla spouse handoffs are outside
+automatic capture.
+
 Items receive no Dearly Kept tags. Moving, stacking, selling, or consuming an item
 does not change its journal entry. The date is the in-game receipt date, not a
 reconstructed delivery date. Capture starts after installation; old gifts are
@@ -29,8 +38,8 @@ These IDs were inspected in the local Stardew Valley 1.6.15 `Data/mail` asset:
 | `WillyTropicalFish` | Willy |
 
 This is source coverage, not a claim that all 26 letters received individual live
-tests. Version 0.2.0's journal acceptance is pending. The candidate-specific
-evidence is listed in [validation](validation.md).
+tests. Candidate-specific receipt, persistence, text, and UI evidence is listed
+in [validation](validation.md).
 
 ## Happy Birthday 3.21.4
 
@@ -53,6 +62,11 @@ including its full-backpack debris path. CP token previews and gift getters on
 their own do not constitute receipt. The spouse-party event uses a separate
 delivery path and is not supported. Other Happy Birthday versions and other
 gift mods do not become compatible automatically.
+
+Birthday transcripts contain only pages actually displayed in the associated
+dialogue box. The observer neither advances dialogue nor prepares future pages
+or evaluates their commands. The stored text is therefore a record of what was
+shown, not a reconstruction from raw dialogue tokens.
 
 ## Content Patcher extension
 
@@ -82,8 +96,8 @@ format is provided for authors and has not been tested against third-party packs
 
 The journal is stored per save through SMAPI's save-data API under this mod's
 `gift-journal` key. Schema version 1 contains a `Gifts` list of receipt snapshots.
-The regular `Saving` event persists new entries and confirmed deletions; an
-unsaved session does not persist them.
+The regular `Saving` event persists the archive; an unsaved session does not
+persist its new memories or message updates. The archive UI is read-only.
 
 Each entry contains:
 
@@ -92,11 +106,19 @@ Each entry contains:
 | `Id` | Unique journal-entry ID; separate receipts have separate IDs. |
 | `SenderId` | Internal NPC name, or `Mom` / `Dad`. |
 | `SourceId` | Exact mail ID or the supported adapter's delivery identifier. |
-| `Origin` | `mail` or `birthday`. |
+| `Origin` | `mail`, `birthday`, `spouse`, or `other`. The UI offers only occasions represented by matching entries. |
 | `SourceModId` | `Omegasis.HappyBirthday` for its supported gifts; otherwise `null`. |
 | `Year`, `Season`, `Day` | In-game receipt date. |
 | `QualifiedItemId`, `ItemName` | Item identity and a saved name for missing-item fallback. |
 | `Quantity`, `Quality` | The received amount and item quality before stack merging. |
+| `MessageText` | Optional actual letter text or observed birthday dialogue; `null` when unavailable. |
+
+`MessageText` is an optional, backward-compatible addition to schema 1. Older
+entries retain their data and show a translated missing-text placeholder.
+Messages are limited to 16,000 characters: an unusually long letter keeps its
+gift entry with no body, while a birthday transcript keeps complete displayed
+pages that fit the limit. The reader wraps and paginates stored text without
+requiring the original letter or inventory item to remain available.
 
 The menu creates separate preview items and never moves inventory items. A
 removed content mod may make an icon unavailable, but the saved name and receipt
@@ -116,9 +138,9 @@ public interface IDearlyKeptApi
 
 `GetGiftCount()` returns the number of entries in the loaded journal.
 `GetGiftsJson()` returns a JSON array of its entries in stored chronological
-order; the menu displays them newest first. These are read-only snapshots, not
-an API for adding, editing, or deleting gifts. Only the current single-player
-save is supported.
+order; the menu displays them newest first. The returned entries include optional
+`MessageText`. This API provides read-only snapshots of the current single-player
+save's archive.
 
 Version 0.1 was an internal item-note prototype. Its legacy item tags are neither
 imported nor modified. They are not a reliable receipt history and do not become

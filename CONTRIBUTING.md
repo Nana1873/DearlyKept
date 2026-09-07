@@ -19,9 +19,9 @@ dotnet .\.sdvkit\tests\bin\DearlyKept.CoreTests\release\DearlyKept.CoreTests.dll
 The independent live harness is under `tests/LiveHarness`. Stage it only as an
 explicit companion in an SDVKit-owned disposable-world review. It refuses
 commands outside that fixture. Never install it into a normal game's Mods folder.
-Version 0.2.0's journal requires new acceptance evidence; historical item-note
-results do not establish journal behavior. [Validation](docs/validation.md)
-records the evidence and remaining limits for each candidate.
+Acceptance is recorded per candidate and capability in
+[validation](docs/validation.md). Earlier receipt and persistence results do not
+establish the newer text-capture, filter, or message-view behavior.
 
 ## Isolated review
 
@@ -66,12 +66,22 @@ English, with localized in-game strings under `i18n/`.
   must remain; no item metadata or stack rules may be changed by Dearly Kept.
 - Save through normal sleep and restart the game. Verify journal persistence,
   save isolation, and that quitting an unsaved day does not preserve its entries.
-- Cancel entry deletion, confirm it, save, and restart. Only the chosen entry
-  should disappear; neither action may modify inventory contents.
+- Filter by occasion and exact sender identity. Offer only available choices,
+  preserve selection when possible, and verify browsing changes neither journal
+  contents nor inventory items. Supported ordinary spouse mail uses `spouse`;
+  Happy Birthday receipts retain `birthday` even when the sender is the spouse.
 - Check newest-first ordering, stable selection when the journal changes,
   quantity display, missing-mod-item name fallback, and the empty state. Exercise
   English and German at 1280x720 and 1920x1080, including 150% UI scale, with
-  single keyboard and controller presses and the deletion confirmation.
+  single keyboard and controller presses, available filters, and message pages.
+- Compare stored letters with the actual personalized viewer text, including all
+  letter pages and visible line breaks. For Happy Birthday, compare only pages
+  actually displayed; observation must not advance dialogue or prepare future
+  pages. Exercise long messages, pagination, and entries without saved text.
+- Load schema-1 entries without `MessageText`, save again, and verify their
+  identities and other fields remain intact. Test the 16,000-character text limit:
+  an oversized letter must retain its gift entry with a null body; birthday
+  transcripts retain complete displayed pages that fit.
 - Toggle each capture setting and inspect `GetGiftCount()` / `GetGiftsJson()`.
   Existing entries remain readable, and the API exposes no mutation methods.
 - With Happy Birthday exactly 3.21.4 staged as an explicit companion, exercise

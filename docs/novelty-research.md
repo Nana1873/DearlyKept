@@ -1,14 +1,18 @@
 # Novelty research
 
-Research dates: **2026-09-07**, refreshed for the journal design **2026-09-08**.
+Research dates: **2026-09-07**, refreshed for the journal design and expanded
+message archive **2026-09-08**.
 
 ## Scope and conclusion
 
 Dearly Kept's selected concept is **an automatic, persistent journal of incoming
 gifts**, preserving their sender, item, quantity, receipt date and occasion across
-supported mail and mod delivery paths. The memory remains after using, selling
-or storing the item. The journal does not consume inventory space or separate
-otherwise stackable gifts. This replaces the initial item-bound prototype.
+supported mail and mod delivery paths. Its expanded scope links those receipts
+to the actual mail text or observed Happy Birthday dialogue pages, when captured
+from a supported delivery, with sender and occasion filters. The memory remains
+after using, selling or storing the item. The journal does not consume inventory
+space or separate otherwise stackable gifts. This replaces the initial
+item-bound prototype.
 
 The research found **no direct functional match for this specific concept** in
 the reviewed web results and mod descriptions. That is a bounded search finding,
@@ -17,8 +21,9 @@ named, or insufficiently documented projects may have been missed. A complete
 title or source-code audit of the Stardew mod dataset was **not performed**.
 
 The proposed distinction is a journal of actual incoming gift receipts across
-known existing sources. It does not claim that NPC gifts, mail archives, item
-labels, or journals are new. The first optional adapter covers Happy Birthday's
+known existing sources and their accompanying messages. It does not claim that
+NPC gifts, mail or dialogue archives, character filters, item labels, or journals
+are new. The first optional adapter covers Happy Birthday's
 normal NPC dialogue gifts and supported birthday mail. Other gift systems and
 the separate spouse party event remain outside the current scope.
 
@@ -29,6 +34,20 @@ overlaps with the general idea of preserving correspondence. Its public
 description does not establish an item-and-quantity receipt journal spanning
 vanilla mail and Happy Birthday. That distinction is an inference from the
 description, not a source audit or a claim that no overlapping feature exists.
+
+[Dia-Log (NPC Dialogue)](https://www.nexusmods.com/stardewvalley/mods/44650)
+is the closest dialogue-archive overlap found in the expanded-scope check. Its
+current Nexus description (version 1.7.1, updated 2026-08-16) documents persistent
+NPC dialogue history, character filters and in-game dates, while explicitly
+excluding letters. The author's
+[DialogueLog.cs](https://github.com/JoinFreeMe/npc-dialogue-log/blob/main/DialogueLog.cs)
+defines entries containing NPC names, text, date and portrait expression, without
+item, quantity or gift-receipt fields. This was a narrow source-file check, not a
+complete repository or released-binary audit. A saved conversation with its
+speaker and date is therefore existing functionality. The bounded search did
+not establish an existing equivalent that links actual incoming item receipts
+to their accompanying mail or birthday dialogue; this is the proposed focus,
+not a claim that combining archive features proves originality.
 
 [Evelyn's Fireside Tales](https://www.nexusmods.com/stardewvalley/mods/50065) has a
 persistent reading journal and reward letters; its journal tracks reading
@@ -76,6 +95,7 @@ Results were reviewed for the described function, not just matching names.
 | Sentimental item alternatives | `Stardew mod "sentimental"`; `Stardew mod "memento"`; `Stardew mod "gift" "keepsake"`; `site:github.com Stardew "keepsake"`; `"Stardew" mod "keepsakes" -memento -Birdie` |
 | Item annotations and memories | `"Stardew" mod "gift tags"`; `"Stardew" mod "item notes"`; `"Stardew" mod "souvenir"`; `Stardew "mod" "item memories"`; `Stardew "mod" "gift memories"`; `Stardew "mod" "personalized items"` |
 | Journal redesign (2026-09-08) | `site:nexusmods.com/stardewvalley "gift journal"`; `Stardew Valley mod "received gifts" journal history`; `site:nexusmods.com/stardewvalley "gift" "history" "received"`; `site:nexusmods.com/stardewvalley "memory" "journal" gifts` |
+| Expanded message archive (2026-09-08) | `Stardew Valley mod "dialogue history"`; `Stardew Valley mod "mail history"`; `Stardew mod "letter archive"`; `Stardew mod "Happy Birthday" "memory" archive journal`; `site:nexusmods.com/stardewvalley "gift" "log" "incoming"`; `site:github.com Stardew "gift journal"` |
 | Incoming-gift tracking | `"Stardew" mod "received gifts"`; `"Stardew" mod "gift tracker" "received"`; `"Stardew" mod "signed" "gift"`; `"Stardew" mod "gift" "timestamp"` |
 | Walking-route counterexamples | `Stardew Valley mod "heatmap"`; `"Stardew" "heat map"`; `Stardew Valley mod "desire paths"`; `site:github.com Stardew "heatmap"` |
 | Recap counterexamples | `site:nexusmods.com/stardewvalley "recap"`; `site:nexusmods.com/stardewvalley "session" "summary"` |

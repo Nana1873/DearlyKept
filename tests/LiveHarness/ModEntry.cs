@@ -13,11 +13,13 @@ internal sealed partial class ModEntry : Mod
 
     public override void Entry(IModHelper helper)
     {
-        helper.ConsoleCommands.Add("dkqa", "Disposable SDVKit fixture only: prepare | fill | mail <key> | collection <key> | birthday <action> | assertBirthday | journal <action> | locale en|de | ui 100|150 | status | assert | checkpoint | persist | save", Run);
+        helper.ConsoleCommands.Add("dkqa", "Disposable SDVKit fixture only: prepare | fill | mail <key> | collection <key> | birthday <action> | assertBirthday | journal <action> | archive longmail|assert | locale en|de | ui 100|150 | status | assert | checkpoint | persist | save", Run);
         helper.Events.GameLoop.Saved += (_, _) => Monitor.Log("DKQA observed SMAPI Saved event; use persist after restarting the same fixture.", LogLevel.Info);
         helper.Events.Content.AssetRequested += EditBirthdayFixtureGifts;
+        helper.Events.Content.AssetRequested += EditArchiveFixtureMail;
         helper.Events.GameLoop.UpdateTicked += ObserveBirthdayDelivery;
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearBirthdayFixtureCache();
+        helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearArchiveFixtureCache();
     }
 
     private void Run(string command, string[] args)
@@ -37,6 +39,9 @@ internal sealed partial class ModEntry : Mod
                     break;
                 case "journal":
                     RunJournalCommand(args);
+                    break;
+                case "archive":
+                    RunArchiveCommand(args, owned);
                     break;
                 case "prepare":
                     RequireNoMenu();
@@ -99,7 +104,18 @@ internal sealed partial class ModEntry : Mod
                         Monitor.Log("DKQA close the actual collection letter, then run journal assertunchanged to verify the deferred close path too.", LogLevel.Info);
                     }
                     else
-                        mailAttempts.AddRange(letter.itemsToGrab.Where(p => p.item is not null).Select(p => new MailReceipt(args[1], p.item.QualifiedItemId, p.item.Stack, p.item.Quality)));
+                    {
+                        string preparedMessage = SnapshotMailText(letter);
+                        mailAttempts.AddRange(letter.itemsToGrab.Where(p => p.item is not null).Select(p => new MailReceipt(args[1], p.item.QualifiedItemId, p.item.Stack, p.item.Quality, preparedMessage)));
+                        Monitor.Log($"DKQA actual letter text baseline: pages={letter.mailMessage.Count}; chars={preparedMessage.Length}; text={JsonSerializer.Serialize(preparedMessage)}", LogLevel.Info);
+                        if (args[1] == LongMailId)
+                        {
+                            Check(letter.mailMessage.Count > 1, "the QA-authored long letter exercises actual vanilla pagination");
+                            Check(preparedMessage.StartsWith("Dear " + Game1.player.Name + ",", StringComparison.Ordinal)
+                                && preparedMessage.Contains('\n') && !preparedMessage.Contains('@') && !preparedMessage.Contains('^'),
+                                "the real letter personalizes @ and prepares caret line breaks before the receipt snapshot");
+                        }
+                    }
                     break;
                 case "status":
                     Monitor.Log($"DKQA fixture={owned.Identity.FixtureId}; game={Game1.uniqueIDForThisGame}; save={Constants.CurrentSavePath}; date={Game1.currentSeason} {Game1.dayOfMonth}, Y{Game1.year}; menu={Game1.activeClickableMenu?.GetType().Name ?? "none"}", LogLevel.Info);
@@ -138,7 +154,7 @@ internal sealed partial class ModEntry : Mod
                     Monitor.Log("DKQA requested vanilla sleep. Saving is asynchronous; wait for the Saved event and the next playable day. SaveGame.Save was not called.", LogLevel.Info);
                     break;
                 default:
-                    throw new InvalidOperationException("Commands: prepare | fill | mail <key> | collection <key> | birthday <action> | assertBirthday | journal <action> | locale en|de | ui 100|150 | status | assert | checkpoint | persist | save.");
+                    throw new InvalidOperationException("Commands: prepare | fill | mail <key> | collection <key> | birthday <action> | assertBirthday | journal <action> | archive longmail|assert | locale en|de | ui 100|150 | status | assert | checkpoint | persist | save.");
             }
         }
         catch (Exception ex)
@@ -154,9 +170,9 @@ internal sealed partial class ModEntry : Mod
         JournalEntry[] received = NewJournalEntries(baseline);
         Check(received.Length == mailAttempts.Count, "exactly one history entry exists for each actual letter attachment");
         var expected = mailAttempts.OrderBy(p => p.SourceId).ThenBy(p => p.ItemId).ThenBy(p => p.Quantity).ToArray();
-        var actual = received.Select(p => new MailReceipt(p.SourceId, p.QualifiedItemId, p.Quantity, p.Quality))
+        var actual = received.Select(p => new MailReceipt(p.SourceId, p.QualifiedItemId, p.Quantity, p.Quality, p.MessageText))
             .OrderBy(p => p.SourceId).ThenBy(p => p.ItemId).ThenBy(p => p.Quantity).ToArray();
-        Check(expected.SequenceEqual(actual), "journal source letters, item IDs, quantities and qualities match the real attachments");
+        Check(expected.SequenceEqual(actual), "journal source letters, item IDs, quantities, qualities and complete messages match the real opened letters");
         foreach (JournalEntry entry in received)
         {
             Check(entry.Origin == "mail" && entry.SourceModId is null, "actual native mail receipts use mail origin without a source mod");

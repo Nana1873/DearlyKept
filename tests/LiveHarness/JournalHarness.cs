@@ -56,6 +56,15 @@ internal sealed partial class ModEntry
             && entry.SourceModId == BirthdayModId && entry.SourceId == "birthday:" + attempt.Sender,
             "the birthday journal entry identifies the actual sender, occasion and Happy Birthday source");
         Check(entry.QualifiedItemId == "(O)223" && entry.Quantity == 1 && entry.Quality == 0, "birthday history records the actual one-Cookie gift");
+        Check(!string.IsNullOrWhiteSpace(attempt.FinalDialogueText) && entry.MessageText == attempt.FinalDialogueText,
+            "birthday history preserves all actually displayed Happy Birthday pages observed independently by QA");
+        if (attempt.ExpectMultipage)
+        {
+            Check(attempt.DisplayedPages.Count == 2, "both distinct pages of the actual HB QA greeting were displayed and observed");
+            Check(attempt.DisplayedPages.All(page => page.Contains(Game1.player.Name, StringComparison.Ordinal)
+                && !page.Contains('@') && !page.Contains("#$b#", StringComparison.Ordinal) && !page.Contains("$h", StringComparison.Ordinal)),
+                "both actual HB pages personalize the player name and omit dialogue commands");
+        }
         AssertJournalEntryDate(entry);
         Item[] cookies = Game1.player.Items.Where(p => p?.QualifiedItemId == "(O)223").ToArray()!;
         Check(cookies.All(p => Raw(p) is null), "birthday Cookies contain no Dearly Kept provenance metadata");
@@ -89,7 +98,7 @@ internal sealed partial class ModEntry
     private static JournalEntry[] ReadJournalEntries(JournalSnapshot snapshot) => JsonSerializer.Deserialize<JournalEntry[]>(snapshot.Json, JsonOptions)
         ?? throw new InvalidOperationException("The journal API did not return an entry array.");
 
-    private sealed record MailReceipt(string SourceId, string ItemId, int Quantity, int Quality);
+    private sealed record MailReceipt(string SourceId, string ItemId, int Quantity, int Quality, string? MessageText);
     private sealed record JournalEntry(string Id, string SenderId, string SourceId, string Origin, string? SourceModId,
-        int Year, string Season, int Day, string QualifiedItemId, string ItemName, int Quantity, int Quality);
+        int Year, string Season, int Day, string QualifiedItemId, string ItemName, int Quantity, int Quality, string? MessageText = null);
 }
