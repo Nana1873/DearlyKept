@@ -1,0 +1,53 @@
+namespace DearlyKept;
+
+/// <summary>Preserves separate receipts even when they describe identical gifts.</summary>
+internal sealed class GiftLedger
+{
+    private readonly List<GiftEntry> entries = new();
+    private readonly HashSet<string> receiptIds = new(StringComparer.Ordinal);
+    public IReadOnlyList<GiftEntry> Entries { get; }
+    public int Revision { get; private set; }
+
+    public GiftLedger() => Entries = entries.AsReadOnly();
+
+    public bool Add(GiftEntry? entry)
+    {
+        if (entry is null || !entry.IsValid() || !receiptIds.Add(entry.Id))
+            return false;
+        entries.Add(entry);
+        Revision++;
+        return true;
+    }
+
+    public bool Remove(string id)
+    {
+        int index = entries.FindIndex(entry => entry.Id == id);
+        if (index < 0)
+            return false;
+        entries.RemoveAt(index);
+        // Keep the receipt ID until reload so a late duplicate callback can't undo removal.
+        Revision++;
+        return true;
+    }
+
+    public void Clear()
+    {
+        entries.Clear();
+        receiptIds.Clear();
+        Revision++;
+    }
+
+    public int Load(JournalData data)
+    {
+        if (data.SchemaVersion != 1 || data.Gifts is null)
+            throw new InvalidDataException("Unsupported or invalid gift journal format.");
+        Clear();
+        int rejected = 0;
+        foreach (GiftEntry? entry in data.Gifts)
+            if (!Add(entry))
+                rejected++;
+        return rejected;
+    }
+
+    public JournalData Snapshot() => new() { Gifts = entries.ToList() };
+}

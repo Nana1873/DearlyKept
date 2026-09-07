@@ -9,7 +9,7 @@ run these commands from the workspace root:
 .\sdvkit.cmd project package .\workspaces\DearlyKept --project DearlyKept.csproj --json
 ```
 
-Pure provenance checks, from the mod root:
+Run the pure journal checks from the mod root:
 
 ```powershell
 dotnet build .\tests\Core\DearlyKept.CoreTests.csproj --configuration Release --artifacts-path .\.sdvkit\tests
@@ -19,32 +19,71 @@ dotnet .\.sdvkit\tests\bin\DearlyKept.CoreTests\release\DearlyKept.CoreTests.dll
 The independent live harness is under `tests/LiveHarness`. Stage it only as an
 explicit companion in an SDVKit-owned disposable-world review. It refuses
 commands outside that fixture. Never install it into a normal game's Mods folder.
-Follow [the live evidence](docs/validation.md) for the exercised scenarios.
+Version 0.2.0's journal requires new acceptance evidence; historical item-note
+results do not establish journal behavior. [Validation](docs/validation.md)
+records the evidence and remaining limits for each candidate.
 
-SDVKit 0.8.0's review project discovery requires a single code-mod project even
-when a build project is selected explicitly. This repository also contains test
-projects, so review the **extracted package**, which verifies the distributed
-artifact directly. From the workspace root, with no review running:
+## Isolated review
+
+Review an extracted package to exercise the distributed artifact. This also
+avoids the single-project discovery limitation of the installed SDVKit 0.8.0
+when a source directory contains multiple code and test projects. From the
+workspace root, with no review running:
 
 ```powershell
-Expand-Archive -LiteralPath '.\workspaces\DearlyKept\.sdvkit\packages\DearlyKept 0.1.0.zip' -DestinationPath '.\workspaces\DearlyKept\.sdvkit\review-new'
+Expand-Archive -LiteralPath '.\workspaces\DearlyKept\.sdvkit\packages\DearlyKept 0.2.0.zip' -DestinationPath '.\workspaces\DearlyKept\.sdvkit\review-new'
 .\sdvkit.cmd lab test-save --topology single --json
 .\sdvkit.cmd project review start .\workspaces\DearlyKept\.sdvkit\review-new\DearlyKept --topology single --test-save --companion .\workspaces\DearlyKept\tests\LiveHarness --json
 .\sdvkit.cmd project review status --json
 # Wait for the exact fixture's identityVerified=true and phase=passed.
-# Run the documented acceptance cases through review command and input.
+# Exercise the acceptance cases through review command and actual game input.
 .\sdvkit.cmd project review stop --json
 .\sdvkit.cmd project review reset --topology single --json
 ```
 
-Use a new extraction directory for each candidate. Stop/start without reset when
-checking saved-item persistence, and reset only after all acceptance work ends.
+Use a new extraction directory for each candidate. For persistence, first save
+through normal sleep, then stop and restart without resetting the fixture.
+Reset only after all acceptance work ends. A forced save helper alone does not
+exercise the regular `Saving` lifecycle.
 
 Generated builds, test output, packages, logs, and screenshots belong below the
-owning project's ignored `.sdvkit/` directory. Keep source and in-game text in
-English, with localized strings under `i18n/`.
+owning project's ignored `.sdvkit/` directory. Keep source and documentation in
+English, with localized in-game strings under `i18n/`.
 
-When changing capture or stacking, test receipt beside an identical ordinary
-stack, different senders, split and rejoin, closing an unclaimed letter, full
-inventory, and persistence through an actual save and a process restart.
-Build success and SMAPI loading alone do not verify these behaviors.
+## Journal acceptance cases
+
+- Receive a supported letter beside an identical ordinary stack. Verify normal
+  merging and one journal entry with the sender, quantity, quality, item, date,
+  and occasion captured before that merge changes the live item.
+- Receive the same item from different senders, and receive another gift from
+  the same sender. These are separate memories even if the items share a stack.
+- Open a letter without claiming its attachment, claim it, close it with an
+  attachment remaining, and replay it in Collections. Verify the standard
+  handoff behavior and no preview-only or duplicate entries.
+- Fill the backpack and exercise the real overflow flow. Verify receipt at the
+  supported handoff and no duplicate when the item is later moved or collected.
+- Store, move, consume, sell, and craft with received items. Journal entries
+  must remain; no item metadata or stack rules may be changed by Dearly Kept.
+- Save through normal sleep and restart the game. Verify journal persistence,
+  save isolation, and that quitting an unsaved day does not preserve its entries.
+- Cancel entry deletion, confirm it, save, and restart. Only the chosen entry
+  should disappear; neither action may modify inventory contents.
+- Check newest-first ordering, stable selection when the journal changes,
+  quantity display, missing-mod-item name fallback, and the empty state. Exercise
+  English and German at 1280x720 and 1920x1080, including 150% UI scale, with
+  single keyboard and controller presses and the deletion confirmation.
+- Toggle each capture setting and inspect `GetGiftCount()` / `GetGiftsJson()`.
+  Existing entries remain readable, and the API exposes no mutation methods.
+- With Happy Birthday exactly 3.21.4 staged as an explicit companion, exercise
+  normal NPC dialogue gifts, full-backpack delivery, parent mail, and belated
+  mail. Check CP previews and direct getter calls do not create journal entries.
+  Verify that a missing or unsupported Happy Birthday version leaves vanilla
+  mail working and its optional adapter disabled.
+
+Happy Birthday spouse-party events, other gift mods, multiplayer, and
+split-screen are outside the current supported scope. Do not turn these cases
+into compatibility claims without implementing and separately accepting their
+delivery paths.
+
+Build success, schema checks, confirmed SMAPI loading, actual gameplay, and visual
+acceptance are separate results. Report each at the scope actually exercised.

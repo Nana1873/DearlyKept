@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
@@ -14,61 +15,109 @@ internal sealed class GiftCapture
     private readonly IModHelper helper;
     private readonly IMonitor monitor;
     private readonly Func<bool> enabled;
+    private readonly Func<bool> birthdayEnabled;
+    private readonly GiftJournal journal;
+    private ConditionalWeakTable<LetterViewerMenu, Dictionary<Item, GiftEntry>> receipts = new();
 
-    public GiftCapture(IModHelper helper, IMonitor monitor, Func<bool> enabled)
+    public GiftCapture(IModHelper helper, IMonitor monitor, GiftJournal journal, Func<bool> enabled, Func<bool> birthdayEnabled)
     {
         this.helper = helper;
         this.monitor = monitor;
         this.enabled = enabled;
+        this.birthdayEnabled = birthdayEnabled;
+        this.journal = journal;
     }
 
     public void Register()
     {
         this.helper.Events.Content.AssetRequested += this.OnAssetRequested;
-        this.helper.Events.Display.MenuChanged += this.OnMenuChanged;
+        this.helper.Events.GameLoop.ReturnedToTitle += (_, _) => this.receipts = new();
     }
 
-    public void HandleMenu(IClickableMenu menu)
+    public LetterReceipt? Begin(LetterViewerMenu letter)
     {
-        if (!this.enabled() || !Context.IsWorldReady || menu is not LetterViewerMenu letter
+        if (!this.enabled() || !this.journal.CanRecord
             || !letter.isMail || letter.isFromCollection || string.IsNullOrEmpty(letter.mailTitle))
         {
-            return;
+            return null;
         }
 
         try
         {
             Dictionary<string, string> senders = this.helper.GameContent.Load<Dictionary<string, string>>(SenderAssetName);
-            if (!senders.TryGetValue(letter.mailTitle, out string? sender) || string.IsNullOrWhiteSpace(sender))
-                return;
+            string? birthdaySender = null;
+            bool birthday = this.birthdayEnabled() && TryBirthdaySender(letter.mailTitle, out birthdaySender);
+            string? sender = birthday ? birthdaySender : senders.GetValueOrDefault(letter.mailTitle);
+            if (string.IsNullOrWhiteSpace(sender))
+                return null;
 
-            GiftStamp stamp = new(sender, letter.mailTitle, Game1.year, Game1.currentSeason, Game1.dayOfMonth);
-            int count = 0;
+            Dictionary<Item, GiftEntry> known = this.receipts.GetValue(letter, _ => new(ReferenceEqualityComparer.Instance));
+            List<KeyValuePair<Item, GiftEntry>> pending = new();
             foreach (ClickableComponent component in letter.itemsToGrab)
             {
                 Item item = component.item;
                 // Recovered possessions and reused inventory objects are not newly sent gifts.
-                if (item is null || item.HasBeenInInventory || item.modData.ContainsKey(GiftTagService.DataKey))
+                if (item is null || item.HasBeenInInventory)
                     continue;
 
-                GiftTagService.Stamp(item, stamp);
-                count++;
+                if (!known.TryGetValue(item, out GiftEntry? entry))
+                {
+                    entry = this.journal.CreateEntry(item, sender, letter.mailTitle,
+                        birthday ? "birthday" : "mail", birthday ? HappyBirthdayIntegration.ModId : null);
+                    if (entry is null)
+                        continue;
+                    known.Add(item, entry);
+                }
+                pending.Add(new(item, entry));
             }
 
-            if (count > 0)
-                this.monitor.Log($"Kept the sender and date on {count} gift stack(s) from mail '{letter.mailTitle}'.", LogLevel.Trace);
+            return new LetterReceipt(Game1.player, pending);
         }
         catch (Exception ex)
         {
             this.monitor.Log($"Couldn't record the gift in mail '{letter.mailTitle}': {ex.Message}", LogLevel.Warn);
+            return null;
         }
     }
 
-    private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
+    public void Complete(LetterViewerMenu letter, LetterReceipt? receipt)
     {
-        if (e.NewMenu is not null)
-            this.HandleMenu(e.NewMenu);
+        if (receipt is null || !this.enabled() || !this.journal.CanRecord || !ReferenceEquals(receipt.Player, Game1.player))
+            return;
+        try
+        {
+            foreach (var pending in receipt.Items)
+            {
+                // A successful transfer returns with claimed attachments removed from the letter.
+                if (!letter.itemsToGrab.Any(component => ReferenceEquals(component.item, pending.Key)))
+                    this.journal.Record(pending.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            this.monitor.Log($"Couldn't finish recording mail '{letter.mailTitle}': {ex.Message}", LogLevel.Warn);
+        }
     }
+
+    private static bool TryBirthdaySender(string mailId, out string? sender)
+    {
+        sender = mailId switch
+        {
+            "Omegasis.HappyBirthday_Mom" => "Mom",
+            "Omegasis.HappyBirthday_Dad" or "Omegasis.HappyBirthday_Dad_Married" => "Dad",
+            _ => null
+        };
+        const string prefix = "Omegasis.HappyBirthday_BelatedBirthdayWish_";
+        if (sender is null && mailId.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            string name = mailId[prefix.Length..];
+            if (Game1.getCharacterFromName(name, false) is { } npc)
+                sender = npc.Name;
+        }
+        return sender is not null;
+    }
+
+    internal sealed record LetterReceipt(Farmer Player, List<KeyValuePair<Item, GiftEntry>> Items);
 
     private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
     {

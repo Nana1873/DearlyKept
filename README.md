@@ -1,51 +1,60 @@
 # Dearly Kept
 
-**Remember who sent your gifts.**
+**A gift journal for the little things people give you.**
 
-The cookies Mom mailed you look just like any other cookies. Dearly Kept keeps a
-small note on the actual gift: who sent it, when you opened the letter, and that
-it arrived by mail. Hover over it in your inventory, or press **K** while playing
-to browse the keepsakes in your backpack.
+Eat Mom's cookies. Put a friend's parcel away for later. Dearly Kept remembers
+the gift in a separate journal: who gave it, what it was, how many you received,
+and the in-game date and occasion. Press **K** to revisit those memories.
+
+Version **0.2.0** replaces the internal item-note prototype with a persistent
+journal. Gameplay acceptance for this new version is still pending; see the
+version-specific scope in [validation](docs/validation.md).
 
 ## Features
 
-- Automatically records the sender and in-game date on supported mail attachments.
-- Adds the note to the game's normal item tooltip.
-- Keeps gifts from different senders or dates separate from ordinary item stacks.
-- Provides a keepsake browser with item icons, villager portraits where available,
-  and a deliberate two-step option to remove a note.
-- Stores notes on the original items using SMAPI's normal `modData`; splitting an
-  item stack retains its note.
-- Includes English and German text. Other languages fall back to English.
+- Records supported gifts as you receive them, starting after installation.
+- Keeps the journal after you store, sell, eat, craft with, or give away a gift.
+- Leaves item stacking and inventory space unchanged.
+- Opens a standalone menu with item previews, sender names, available portraits,
+  quantities, dates, and occasions. Newest entries appear first.
+- Saves the journal separately for each save during the game's regular save.
+- Supports keyboard, mouse, and controller navigation, with English and German
+  text. Other languages fall back to English.
 
 ## Install and use
 
-Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**. Tested runtime and
-acceptance scope are recorded in [validation](docs/validation.md).
+Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**.
 
 1. Install SMAPI.
 2. Extract the release ZIP into `Stardew Valley/Mods`.
-3. Launch through SMAPI and collect a supported gift letter.
-4. Hover over the gift, or press **K** when no other menu is open.
+3. Launch through SMAPI and receive a supported gift.
+4. Press **K** while no other menu or event is open, or use `dk` in the SMAPI
+   console, to open your journal.
 
-No other mod is required. There is no new game item, currency, or friendship
-bonus. The sender is determined from the letter's exact internal ID.
-
-The keepsake browser shows your **current backpack**. Store a gift in a chest and
-its note stays with it; put it back in your backpack to browse or remove the note.
-Removing a note does not delete the item. It allows normal stacking again.
+No other mod is required for vanilla gift mail. Gifts remain ordinary items:
+they can stack together and do not need to stay in your backpack. The journal's
+**Delete entry** action asks for confirmation and deletes only that memory.
+New entries and deletions persist at the next regular game save; quitting
+without saving also discards that day's journal changes.
 
 ## Which gifts count?
 
-Version 0.1.0 supports 26 known vanilla gift and thank-you letter IDs, including
-Mom's cookies, regular friendship parcels, and Evelyn's thank-you gift from the
-leek order. See the exact list and extension format in
-[mail support](docs/mail-support.md).
+- **Vanilla gift mail:** 26 known gift and thank-you letter IDs, including Mom's
+  cookies and Evelyn's thank-you gift from the leek order.
+- **Content Patcher mail:** authors can extend the exact letter-to-sender
+  dictionary for attachments delivered through the normal mail viewer.
+- **Happy Birthday 3.21.4, optionally:** ordinary birthday gifts given through
+  NPC dialogue, plus its parent and belated birthday gift letters. The adapter
+  activates only for that exact version of `Omegasis.HappyBirthday`.
 
-Direct spouse gifts, the Feast of the Winter Star, quest hand-ins, old items you
-already own, and arbitrary mail-framework attachments are outside this version's
-automatic capture. A note records the **opening date**, not the delivery date.
-Rereading a letter in Collections does not create or stamp items.
+See [mail support](docs/mail-support.md) for the included IDs and extension
+format. The journal records actual gifts, not money, invitations, or previews.
+Rereading a letter in Collections does not create another entry.
+
+Happy Birthday's spouse-party event is not supported. Ordinary vanilla spouse
+gifts, the Feast of the Winter Star, quest hand-ins, custom mail-framework menus,
+and other gift mods are not captured automatically. Existing items and past
+gifts are not reconstructed.
 
 ## Settings
 
@@ -53,33 +62,39 @@ After the first launch, edit `config.json` while the game is closed:
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `OpenKeepsakes` | `K` | SMAPI key binding for the backpack keepsake browser. |
-| `CaptureMailGifts` | `true` | Add notes to newly opened supported gifts. |
-| `ShowGiftNotesInTooltips` | `true` | Display notes in normal item tooltips. |
+| `OpenKeepsakes` | `K` | SMAPI key binding for the gift journal. |
+| `CaptureMailGifts` | `true` | Record newly received supported mail attachments. |
+| `CaptureBirthdayGifts` | `true` | Record gifts supported by the Happy Birthday adapter. |
 
-SMAPI console: `dk` opens the browser; `dk_status` reports tagged backpack stacks.
-If K is used by another mod, choose a different key or combination in the config.
+Happy Birthday mail requires both capture settings. Disabling capture does not
+remove existing journal entries. `dk_status` reports the current journal and
+adapter status. If K is used by another mod, choose another key or combination.
 
 ## Compatibility and removal
 
-The mod uses narrow Harmony hooks for letter attachment capture, item stacking,
-and normal item tooltip text. It does not replace maps, textures, schedules, or
-gift tastes. Mods which replace those methods or skip the standard stacking API
-need separate compatibility testing. Multiplayer and split-screen are not yet
-validated; this release is intended for single-player.
+The current scope is **single-player**. Recording is disabled in multiplayer
+and split-screen. Mail or dialogue replacements need separate compatibility
+checks when they bypass the supported delivery paths.
 
-To uninstall, remove the mod folder. Items remain ordinary vanilla items; the
-small metadata entry is inert without the mod. Vanilla stacking can then merge
-previously separate gifts and discard their distinction. Reinstalling cannot
-recover a lost note. Consuming, crafting with, or selling a gift is still allowed;
-this mod is not an item lock or an archive of consumed gifts.
+Version 0.2.0 does not add item tags, patch stacking, or alter normal inventory
+tooltips. It snapshots gifts at supported delivery points and stores the journal
+in SMAPI save data. There are no new game items, maps, textures, currencies, or
+friendship bonuses.
 
-## Development
+Removing the mod leaves your items unchanged; the journal UI is unavailable
+without it. Version 0.1 was an internal prototype. Its old item tags are neither
+imported nor modified, and they are not used to guess historical journal entries.
 
-Source, build steps, and test procedures: [CONTRIBUTING.md](CONTRIBUTING.md).
+## Integration and development
+
+Other mods can read the loaded journal through the read-only SMAPI API methods
+`GetGiftCount()` and `GetGiftsJson()`. This API does not add, remove, or modify
+entries. See [the data and API reference](docs/mail-support.md#data-and-read-only-api).
+
+Build steps and acceptance cases: [CONTRIBUTING.md](CONTRIBUTING.md).
 Novelty and adjacent-mod research: [research notes](docs/novelty-research.md).
 
-Code was authored with Codex and tested with
+Code was authored with Codex and developed using
 [SDVKit](https://github.com/Nana1873/SDVKit). No generated artwork or redistributed
 game textures are included. The interface draws from the installed game's assets.
 

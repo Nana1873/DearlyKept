@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../GiftStamp.cs" Link="GiftStamp.cs" />
-    <Compile Include="../../StampCodec.cs" Link="StampCodec.cs" />
+    <Compile Include="../../GiftEntry.cs" Link="GiftEntry.cs" />
+    <Compile Include="../../GiftLedger.cs" Link="GiftLedger.cs" />
   </ItemGroup>
 </Project>

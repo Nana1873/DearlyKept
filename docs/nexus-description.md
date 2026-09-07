@@ -1,49 +1,65 @@
-# Dearly Kept — Remember Who Sent Your Gifts
+# Dearly Kept — A Lasting Gift Journal
+
+Draft for 0.2.0. Journal gameplay acceptance is still pending; finish the
+candidate's validation before using this description for a public upload.
 
 **Those cookies came from Mom. Now you can keep that little memory.**
 
-Dearly Kept adds a sender and date to gifts that arrive in supported letters.
-Hover over the actual item to see its note, or press **K** to browse the keepsakes
-in your backpack with familiar villager portraits.
+Dearly Kept keeps a gift journal with the sender, item, quantity, in-game date,
+and occasion. Press **K** to browse your memories with item previews and familiar
+villager portraits.
 
-Mom's cookies stay separate from the cookies you bought. Gifts from different
-people or different days keep their own notes. You can still eat, sell, craft
-with, or give away the item normally. If you'd like it to stack with ordinary
-items again, open the keepsake browser and confirm **Remove note**.
+You can eat the cookies. Store, sell, craft with, or give away the other gifts.
+Their memories remain in the journal, and the items stack and work as usual.
+You do not have to keep anything in your backpack or set aside inventory space.
 
 ## What you get
 
-- Automatic notes on 26 supported vanilla gift and thank-you letters.
-- Normal item tooltips with the sender and opening date.
-- A keepsake browser for your backpack.
+- A persistent journal for 26 supported vanilla gift and thank-you letter IDs.
+- Optional support for Happy Birthday **3.21.4**: normal NPC dialogue gifts,
+  parent gift mail, and belated birthday mail.
+- A separate journal menu with the newest memories first.
+- Sender, item, quantity, date, and occasion for each receipt.
 - English and German translations.
-- No extra framework dependency beyond SMAPI.
+- Keyboard, mouse, and controller navigation.
+- No item tags, stacking changes, or required mod beyond SMAPI for vanilla mail.
 
 ## Install
 
 Requires Stardew Valley **1.6.15** and SMAPI **4.5.0+**.
 Unzip the `DearlyKept` folder into your game's `Mods` folder and launch with SMAPI.
-Press **K** while no other menu is open. The hotkey can be changed in `config.json`.
+Press **K** while no other menu or event is open, or enter `dk` in the SMAPI
+console. The hotkey can be changed in `config.json`.
 
-Notes start with newly opened supported letters after installation. There is no
-retroactive guessing of who gave you an old item. Direct spouse gifts, Winter
-Star gifts, and custom mail-framework menus are outside this first version.
-The browser shows carried items; notes stay on gifts stored in chests.
+The journal starts with gifts received after installation. It does not guess who
+gave you an old item or reconstruct past gifts. Each save has its own journal,
+saved when the game normally saves. Quitting without saving discards that day's
+journal changes too.
+
+The menu's **Delete entry** action asks for confirmation and removes only that
+journal entry. Your items are unaffected. `CaptureMailGifts` and
+`CaptureBirthdayGifts` can disable future recording without erasing your memories.
+Birthday mail needs both options enabled.
 
 ## Compatibility
 
-This is an initial single-player release. Multiplayer, split-screen, and
-third-party mail or inventory replacements are not yet validated. Mod authors
-can extend the exact letter-to-sender dictionary through Content Patcher.
+The current scope is single-player; recording is disabled in multiplayer and
+split-screen. Mod authors can extend the exact letter-to-sender dictionary
+through Content Patcher for the normal mail viewer. A read-only SMAPI API exposes
+`GetGiftCount()` and `GetGiftsJson()` for other mods.
 
-Uninstalling leaves ordinary game items intact. Their unused metadata becomes
-inert; subsequent vanilla stacking may lose the distinction between gifts.
-This mod does not lock items against use or preserve gifts after consumption.
+Happy Birthday support is limited to exactly **3.21.4**. Its spouse-party event
+is not supported. Ordinary spouse gifts, Winter Star gifts, quest hand-ins,
+custom mail-framework menus, and other gift mods are not captured automatically.
+
+Removing Dearly Kept leaves your items unchanged; its journal menu is unavailable
+without the mod. Version 0.1 was an internal prototype. Its old item tags are
+neither imported into the journal nor modified.
 
 ## Development and credits
 
-Code authored with Codex, built and exercised in an isolated Stardew Valley
-session using [SDVKit](https://github.com/Nana1873/SDVKit). No generated artwork,
+Code authored with Codex and developed using
+[SDVKit](https://github.com/Nana1873/SDVKit). No generated artwork,
 voices, dialogue packs, or game textures are distributed.
 
 See the source project's validation report for the exact test scope.
@@ -54,13 +70,16 @@ Stardew Valley.
 
 ## Upload preparation notes (remove this section before posting)
 
-- Short description: **Keeps the sender and date on gifts received by mail. Browse
-  your keepsakes and remember which cookies came from Mom. English and German.**
+- Short description: **A lasting gift journal with senders, items, quantities,
+  dates, and occasions. Use your gifts normally and keep the memory. EN/DE.**
 - Suggested category: User Interface; choose current applicable SMAPI/Quality of
   Life/1.6 compatibility tags in the upload form.
-- Lead screenshot: the keepsake browser with Mom and Evelyn gifts.
-- Second screenshot: the normal inventory tooltip showing a gift's origin.
-- Optional third screenshot: the German UI.
+- Lead screenshot: the journal with Mom and Evelyn entries.
+- Second screenshot: a saved memory after its gift has been consumed.
+- Optional third screenshot: the German journal or a supported birthday entry.
+- Complete 0.2.0 journal acceptance and refresh the screenshots before uploading;
+  the old item-tooltip screenshots describe the internal prototype.
 - Add the actual repository and Nexus update IDs only once those pages exist.
-- The novelty research found no direct duplicate. Avoid advertising a provable
-  "world first" or promising any download count.
+- Recheck novelty for the journal design. Research for the former item-note
+  prototype does not establish uniqueness for this version. Avoid advertising
+  a provable "world first" or promising any download count.

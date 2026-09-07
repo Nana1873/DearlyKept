@@ -10,14 +10,15 @@ using StardewValley.Menus;
 
 namespace DearlyKept;
 
-/// <summary>Browse the notes on gifts currently carried by this farmer.</summary>
+/// <summary>Browse this farmer's saved gift memories without changing any inventory items.</summary>
 internal sealed class KeepsakeMenu : IClickableMenu
 {
     private const int RowHeight = 82;
     private static readonly Color MutedText = new(114, 91, 74);
     private static readonly Color Highlight = new(255, 237, 190);
     private readonly ITranslationHelper i18n;
-    private readonly Func<GiftStamp, string> formatNote;
+    private readonly GiftJournal journal;
+    private readonly Func<GiftEntry, string> formatNote;
     private readonly Func<string, string> senderName;
     private readonly List<KeepsakeEntry> entries = new();
     private Rectangle listBounds;
@@ -35,15 +36,16 @@ internal sealed class KeepsakeMenu : IClickableMenu
     private bool compactLayout;
     private bool removeFocused;
     private bool confirmFocused;
-    private Item? pendingRemoval;
+    private string? pendingRemoval;
     private string hoverText = "";
-    private double refreshInMilliseconds;
+    private int displayedRevision = int.MinValue;
     private double statusMilliseconds;
 
-    public KeepsakeMenu(ITranslationHelper i18n, Func<GiftStamp, string> formatNote, Func<string, string> senderName)
+    public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName)
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
         this.i18n = i18n;
+        this.journal = journal;
         this.formatNote = formatNote;
         this.senderName = senderName;
         Layout();
@@ -64,7 +66,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
         visibleRows = Math.Max(1, (height - (compactLayout ? 224 : 276)) / rowHeight);
         listBounds = new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 128 : 150), columnWidth, visibleRows * rowHeight);
         detailBounds = new Rectangle(listBounds.Right + 24, yPositionOnScreen + (compactLayout ? 112 : 120), width - columnWidth - 88, height - (compactLayout ? 186 : 204));
-        removeBounds = new Rectangle(detailBounds.X + 20, detailBounds.Bottom - 68, detailBounds.Width - 40, 48);
+        removeBounds = new Rectangle(detailBounds.X + 20, detailBounds.Bottom - (compactLayout ? 52 : 68), detailBounds.Width - 40, compactLayout ? 38 : 48);
         previousBounds = new Rectangle(listBounds.X, yPositionOnScreen + height - (compactLayout ? 88 : 116), 48, compactLayout ? 36 : 40);
         nextBounds = new Rectangle(listBounds.Right - 48, previousBounds.Y, 48, previousBounds.Height);
 
@@ -81,24 +83,45 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     private void RefreshEntries()
     {
-        Item? selectedItem = SelectedEntry?.Item;
-        int previousIndex = selectedIndex;
-        entries.Clear();
-        foreach (Item? item in Game1.player.Items)
-        {
-            if (item != null && GiftTagService.TryRead(item, out GiftStamp stamp))
-                entries.Add(new KeepsakeEntry(item, stamp));
-        }
+        if (displayedRevision == journal.Revision)
+            return;
 
-        selectedIndex = selectedItem == null ? -1 : entries.FindIndex(entry => ReferenceEquals(entry.Item, selectedItem));
+        string? selectedId = SelectedEntry?.Entry.Id;
+        int previousIndex = selectedIndex;
+        Dictionary<string, KeepsakeEntry> previousEntries = entries.ToDictionary(entry => entry.Entry.Id);
+        entries.Clear();
+        foreach (GiftEntry entry in journal.Entries.Reverse())
+        {
+            entries.Add(previousEntries.TryGetValue(entry.Id, out KeepsakeEntry? previous) && previous.Entry == entry
+                ? previous
+                : CreatePreview(entry));
+        }
+        displayedRevision = journal.Revision;
+
+        selectedIndex = selectedId == null ? -1 : entries.FindIndex(entry => entry.Entry.Id == selectedId);
         if (selectedIndex < 0 && entries.Count > 0)
             selectedIndex = Math.Clamp(previousIndex, 0, entries.Count - 1);
 
-        if (pendingRemoval != null && !ReferenceEquals(SelectedEntry?.Item, pendingRemoval))
+        if (pendingRemoval != null && SelectedEntry?.Entry.Id != pendingRemoval)
             CancelRemoval();
         if (entries.Count == 0)
             removeFocused = false;
         EnsureSelectionVisible();
+    }
+
+    private static KeepsakeEntry CreatePreview(GiftEntry entry)
+    {
+        try
+        {
+            // This is a separate display item. It is never added to a player's inventory.
+            Item? preview = ItemRegistry.Create(entry.QualifiedItemId, 1, entry.Quality, allowNull: true);
+            return new KeepsakeEntry(entry, preview, preview?.DisplayName ?? entry.ItemName);
+        }
+        catch (Exception)
+        {
+            // A saved memory remains readable after the mod that supplied its item is removed.
+            return new KeepsakeEntry(entry, null, entry.ItemName);
+        }
     }
 
     private KeepsakeEntry? SelectedEntry => selectedIndex >= 0 && selectedIndex < entries.Count ? entries[selectedIndex] : null;
@@ -114,11 +137,17 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     private Rectangle RowBounds(int visibleIndex) => new(listBounds.X, listBounds.Y + visibleIndex * rowHeight, listBounds.Width, rowHeight - 6);
 
-    private string DateText(GiftStamp stamp) => i18n.Get("menu.date", new
+    private string DateText(GiftEntry entry) => i18n.Get("menu.date", new
     {
-        day = stamp.Day,
-        season = i18n.Get($"season.{stamp.Season}").ToString(),
-        year = stamp.Year
+        day = entry.Day,
+        season = i18n.Get($"season.{entry.Season}").ToString(),
+        year = entry.Year
+    }).ToString();
+
+    private string ItemText(KeepsakeEntry entry) => i18n.Get("menu.item", new
+    {
+        quantity = entry.Entry.Quantity,
+        item = entry.DisplayName
     }).ToString();
 
     private void Select(int index)
@@ -140,7 +169,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
         RefreshEntries();
         if (SelectedEntry is not { } selected)
             return;
-        pendingRemoval = selected.Item;
+        pendingRemoval = selected.Entry.Id;
         confirmFocused = false;
         hoverText = "";
         Game1.playSound("smallSelect");
@@ -154,13 +183,11 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     private void ConfirmRemoval()
     {
-        Item? item = pendingRemoval;
+        string? id = pendingRemoval;
         CancelRemoval();
 
-        // The menu never transfers items or merges stacks. Vanilla handles future stacking.
-        if (item != null && Game1.player.Items.Any(carried => ReferenceEquals(carried, item)) && GiftTagService.TryRead(item, out _))
+        if (id != null && journal.Remove(id))
         {
-            GiftTagService.Remove(item);
             statusMilliseconds = 4000;
             Game1.playSound("smallSelect");
         }
@@ -170,13 +197,8 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void update(GameTime time)
     {
         base.update(time);
-        refreshInMilliseconds -= time.ElapsedGameTime.TotalMilliseconds;
         statusMilliseconds = Math.Max(0, statusMilliseconds - time.ElapsedGameTime.TotalMilliseconds);
-        if (refreshInMilliseconds <= 0)
-        {
-            RefreshEntries();
-            refreshInMilliseconds = 200;
-        }
+        RefreshEntries();
     }
 
     public override void gameWindowSizeChanged(Rectangle oldBounds, Rectangle newBounds)
@@ -346,7 +368,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             if (!RowBounds(row).Contains(x, y))
                 continue;
             KeepsakeEntry entry = entries[firstVisibleIndex + row];
-            hoverText = entry.Item.DisplayName + "\n" + formatNote(entry.Stamp);
+            hoverText = ItemText(entry) + "\n" + formatNote(entry.Entry);
             return;
         }
         if (removeBounds.Contains(x, y) && SelectedEntry != null)
@@ -402,11 +424,11 @@ internal sealed class KeepsakeMenu : IClickableMenu
             if (selected && !removeFocused)
                 b.Draw(Game1.staminaRect, new Rectangle(bounds.X + 9, bounds.Y + 12, 6, bounds.Height - 24), new Color(62, 107, 69));
 
-            entry.Item.drawInMenu(b, new Vector2(bounds.X + 16, bounds.Y + 5), compactLayout ? 0.75f : 0.9f);
+            DrawPreview(b, entry, new Vector2(bounds.X + 16, bounds.Y + 5), compactLayout ? 0.75f : 0.9f);
             float textX = bounds.X + (compactLayout ? 70 : 82);
             float availableWidth = bounds.Right - textX - 16;
-            b.DrawString(Game1.smallFont, FitText(entry.Item.DisplayName, Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 9 : 13)), Game1.textColor);
-            b.DrawString(Game1.smallFont, FitText(senderName(entry.Stamp.SenderId), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 34 : 42)), MutedText);
+            b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 9 : 13)), Game1.textColor);
+            b.DrawString(Game1.smallFont, FitText(senderName(entry.Entry.SenderId), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 34 : 42)), MutedText);
         }
     }
 
@@ -415,26 +437,41 @@ internal sealed class KeepsakeMenu : IClickableMenu
         if (SelectedEntry is not { } entry)
             return;
         DrawBox(b, detailBounds);
-        entry.Item.drawInMenu(b, new Vector2(detailBounds.X + 22, detailBounds.Y + 18), 1f);
+        DrawPreview(b, entry, new Vector2(detailBounds.X + 22, detailBounds.Y + (compactLayout ? 12 : 18)), 1f);
         int textX = detailBounds.X + 100;
         int textWidth = detailBounds.Width - 120;
-        b.DrawString(Game1.smallFont, FitText(entry.Item.DisplayName, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + 25), Game1.textColor);
-        string from = i18n.Get("menu.from", new { sender = senderName(entry.Stamp.SenderId) }).ToString();
-        b.DrawString(Game1.smallFont, FitText(from, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + 56), MutedText);
-        DrawRule(b, new Rectangle(detailBounds.X + 20, detailBounds.Y + 101, detailBounds.Width - 40, 2));
+        b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 17 : 25)), Game1.textColor);
+        string from = i18n.Get("menu.from", new { sender = senderName(entry.Entry.SenderId) }).ToString();
+        b.DrawString(Game1.smallFont, FitText(from, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 48 : 56)), MutedText);
+        DrawRule(b, new Rectangle(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 87 : 101), detailBounds.Width - 40, 2));
 
         int noteX = detailBounds.X + 24;
-        int noteY = detailBounds.Y + 123;
-        if (!compactLayout && Game1.getCharacterFromName(entry.Stamp.SenderId, false) is { Portrait: { } portrait })
+        int noteY = detailBounds.Y + (compactLayout ? 98 : 123);
+        if (!compactLayout && Game1.getCharacterFromName(entry.Entry.SenderId, false) is { Portrait: { } portrait })
         {
             b.Draw(portrait, new Rectangle(noteX, noteY, 96, 96), new Rectangle(0, 0, 64, 64), Color.White);
             noteX += 116;
         }
 
         int noteWidth = detailBounds.Right - noteX - 24;
-        string date = Game1.parseText(DateText(entry.Stamp), Game1.smallFont, noteWidth);
+        string date = FitText(DateText(entry.Entry), Game1.smallFont, noteWidth);
         b.DrawString(Game1.smallFont, date, new Vector2(noteX, noteY), MutedText);
+        string occasion = i18n.Get(entry.Entry.Origin == "birthday" ? "menu.occasion.birthday" : "menu.occasion.mail").ToString();
+        b.DrawString(Game1.smallFont, FitText(occasion, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 32), MutedText);
+        if (entry.Entry.SourceModId == "Omegasis.HappyBirthday")
+        {
+            string provider = i18n.Get("note.provider", new { name = "Happy Birthday" }).ToString();
+            b.DrawString(Game1.smallFont, FitText(provider, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 64), MutedText);
+        }
         DrawButton(b, removeBounds, i18n.Get("menu.remove").ToString(), removeFocused);
+    }
+
+    private static void DrawPreview(SpriteBatch b, KeepsakeEntry entry, Vector2 position, float scale)
+    {
+        if (entry.Preview != null)
+            entry.Preview.drawInMenu(b, position, scale);
+        else
+            DrawCentered(b, "?", Game1.dialogueFont, new Rectangle((int)position.X, (int)position.Y, (int)(64 * scale), (int)(64 * scale)), MutedText);
     }
 
     private void DrawEmptyState(SpriteBatch b)
@@ -487,5 +524,5 @@ internal sealed class KeepsakeMenu : IClickableMenu
         return text[..length].TrimEnd() + ellipsis;
     }
 
-    private sealed record KeepsakeEntry(Item Item, GiftStamp Stamp);
+    private sealed record KeepsakeEntry(GiftEntry Entry, Item? Preview, string DisplayName);
 }
