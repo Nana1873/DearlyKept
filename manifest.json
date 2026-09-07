@@ -1,0 +1,10 @@
+{
+  "Name": "Dearly Kept",
+  "Author": "Nana1873",
+  "Version": "0.1.0",
+  "Description": "Remember who sent your gifts. Keeps sender and date on gifts received by mail.",
+  "UniqueID": "Nana1873.DearlyKept",
+  "EntryDll": "DearlyKept.dll",
+  "MinimumApiVersion": "4.5.0",
+  "UpdateKeys": []
+}

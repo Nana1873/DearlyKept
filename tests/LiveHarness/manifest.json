@@ -1,0 +1,13 @@
+{
+  "Name": "Dearly Kept Live QA Harness",
+  "Author": "Nana1873",
+  "Version": "0.1.0",
+  "Description": "Disposable SDVKit fixture checks. Development only; never include in a release.",
+  "UniqueID": "Nana1873.DearlyKept.LiveHarness",
+  "EntryDll": "LiveHarness.dll",
+  "MinimumApiVersion": "4.0.0",
+  "Dependencies": [
+    { "UniqueID": "Nana1873.DearlyKept", "IsRequired": true }
+  ],
+  "UpdateKeys": []
+}
