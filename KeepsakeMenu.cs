@@ -141,7 +141,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
         originChoices.Clear();
         originChoices.Add("");
-        originChoices.AddRange(new[] { "mail", "birthday", "spouse", "other" }.Where(origin =>
+        originChoices.AddRange(new[] { "mail", "birthday", "spouse", "anniversary", "other" }.Where(origin =>
             allEntries.Any(entry => entry.Entry.Origin == origin && (senderFilter.Length == 0 || entry.Entry.SenderId == senderFilter))));
         senderChoices.Clear();
         senderChoices.Add("");

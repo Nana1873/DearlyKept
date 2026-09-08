@@ -30,8 +30,7 @@ establish the newer text-capture, filter, or message-view behavior.
 ## Isolated review
 
 Review an extracted package to exercise the distributed artifact. This also
-avoids the single-project discovery limitation of the installed SDVKit 0.8.0
-when a source directory contains multiple code and test projects. From the
+exercises the same packaged production files that users receive. From the
 workspace root, with no review running:
 
 ```powershell
@@ -94,7 +93,10 @@ English, with localized in-game strings under `i18n/`.
   Verify that a missing or unsupported Happy Birthday version leaves vanilla
   mail working and its optional adapter disabled.
 
-Happy Birthday spouse-party events, other gift mods, multiplayer, and
+See [spouse integrations](docs/spouse-integrations.md) for the two optional
+spouse adapters and their source-built test dependencies.
+
+Happy Birthday spouse-party events, unlisted gift mods, multiplayer, and
 split-screen are outside the current supported scope. Do not turn these cases
 into compatibility claims without implementing and separately accepting their
 delivery paths.

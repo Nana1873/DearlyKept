@@ -213,6 +213,10 @@ Check("additional categories and optional message text survive persistence",
     && originsReloaded.Entries.SequenceEqual(new[] { spouseGift, otherGift }));
 
 recovered.Clear();
+var anniversary = spouseGift with { Id = Guid.NewGuid().ToString("N"), Origin = "anniversary", SourceModId = "Kantrip.WeddingAnniversaries" };
+Check("anniversary receipts are valid and survive schema-1 JSON", anniversary.IsValid()
+    && JsonSerializer.Deserialize<GiftEntry>(JsonSerializer.Serialize(anniversary)) == anniversary);
+Check("unknown occasions remain invalid", !(anniversary with { Origin = "invented" }).IsValid());
 Check("clearing for a new save removes old history", recovered.Entries.Count == 0);
 Check("a new save can accept a receipt ID seen in the previous save", recovered.Add(mail)
     && recovered.Entries.SequenceEqual(new[] { mail }));

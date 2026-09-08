@@ -1,7 +1,7 @@
 # Dearly Kept — A Lasting Gift Journal
 
-Unreleased 0.2.0 description draft. See the validation report for the accepted
-artifact, actual gameplay checks, and source-built Happy Birthday test scope.
+Unreleased 0.3.0 description draft. See the validation report for the accepted
+artifact, actual gameplay checks, and source-built integration test scope.
 
 **Those cookies came from Mom. Now you can keep that little memory.**
 
@@ -18,9 +18,11 @@ You do not have to keep anything in your backpack or set aside inventory space.
 - A persistent journal for 26 supported vanilla gift and thank-you letter IDs.
 - Optional support for Happy Birthday **3.21.4**: normal NPC dialogue gifts,
   parent gift mail, and belated birthday mail.
+- Optional Marriage Overhaul **1.7.4** birthday and delayed project gifts.
+- Optional Wedding Anniversaries **2.1** gifts, with a wedding anniversary filter.
 - A separate journal menu with the newest memories first.
 - Sender, item, quantity, date, and occasion for each receipt.
-- Saved personalized letters and the birthday dialogue pages actually shown.
+- Saved personalized letters and the gift dialogue pages actually shown.
 - Available occasion and sender filters, plus a paginated message reader.
 - English and German translations.
 - Keyboard, mouse, and controller navigation.
@@ -56,7 +58,7 @@ appear in the filter.
 
 Happy Birthday support is limited to exactly **3.21.4**. Its spouse-party event
 is not supported. Direct vanilla spouse handoffs, Winter Star gifts, quest hand-ins,
-custom mail-framework menus, and other gift mods are not captured automatically.
+custom mail-framework menus, and unlisted gift mods are not captured automatically.
 
 Removing Dearly Kept leaves your items unchanged; its journal menu is unavailable
 without the mod. Version 0.1 was an internal prototype. Its old item tags are
@@ -83,7 +85,7 @@ Stardew Valley.
 - Lead screenshot: the journal with Mom and Evelyn entries.
 - Second screenshot: the message reader showing an actual recorded letter.
 - Optional third screenshot: the German archive with an active filter.
-- Use the accepted 0.2.0 archive screenshots and its exact tested ZIP; the old
+- Use the accepted 0.3.0 integration screenshots and its exact tested ZIP; the old
   item-tooltip screenshots describe the internal prototype.
 - Add the actual repository and Nexus update IDs only once those pages exist.
 - The September 8 journal research found adjacent letter/dialogue archives;

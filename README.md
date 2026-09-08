@@ -17,7 +17,7 @@ The tested runtime and current acceptance scope are recorded in
 - Opens a standalone menu with item previews, sender names, available portraits,
   quantities, dates, and occasions. Newest entries appear first.
 - Filters memories by occasion and sender, offering only choices with entries.
-- Keeps the actual gift letter or displayed birthday dialogue for later reading
+- Keeps the actual gift letter or displayed gift dialogue for later reading
   in a separate, paginated message view.
 - Saves the journal separately for each save during the game's regular save.
 - Supports keyboard, mouse, and controller navigation, with English and German
@@ -54,6 +54,12 @@ remain readable and show a placeholder in the message view.
 - **Happy Birthday 3.21.4, optionally:** ordinary birthday gifts given through
   NPC dialogue, plus its parent and belated birthday gift letters. The adapter
   activates only for that exact version of `Omegasis.HappyBirthday`.
+- **Marriage Overhaul 1.7.4, optionally:** birthday gifts and delayed project
+  rewards, including delivery to the fridge when the backpack is full.
+- **Wedding Anniversaries 2.1, optionally:** gifts from its anniversary dialogue,
+  including the normal inventory overflow menu. These use **Anniversary**.
+
+The new spouse adapters have a separate [support and validation scope](docs/spouse-integrations.md).
 
 See [mail support](docs/mail-support.md) for the included IDs and extension
 format. The journal records actual gifts, not money, invitations, or previews.
@@ -65,7 +71,7 @@ your spouse. This classification does not add support for other delivery paths.
 
 Happy Birthday's spouse-party event is not supported. Direct vanilla spouse
 handoffs, the Feast of the Winter Star, quest hand-ins, custom mail-framework menus,
-and other gift mods are not captured automatically. Existing items and past
+and unlisted gift mods are not captured automatically. Existing items and past
 gifts are not reconstructed.
 
 ## Settings
@@ -77,6 +83,8 @@ After the first launch, edit `config.json` while the game is closed:
 | `OpenKeepsakes` | `K` | SMAPI key binding for the gift journal. |
 | `CaptureMailGifts` | `true` | Record newly received supported mail attachments. |
 | `CaptureBirthdayGifts` | `true` | Record gifts supported by the Happy Birthday adapter. |
+| `CaptureMarriageOverhaulGifts` | `true` | Record supported Marriage Overhaul birthday and project gifts. |
+| `CaptureAnniversaryGifts` | `true` | Record Wedding Anniversaries dialogue gifts. |
 
 Happy Birthday mail requires both capture settings. Disabling capture does not
 remove existing journal entries. `dk_status` reports the current journal and
@@ -88,7 +96,7 @@ The current scope is **single-player**. Recording is disabled in multiplayer
 and split-screen. Mail or dialogue replacements need separate compatibility
 checks when they bypass the supported delivery paths.
 
-Version 0.2.0 does not add item tags, patch stacking, or alter normal inventory
+Version 0.3.0 does not add item tags, patch stacking, or alter normal inventory
 tooltips. It snapshots gifts at supported delivery points and stores the journal
 in SMAPI save data. There are no new game items, maps, textures, currencies, or
 friendship bonuses.

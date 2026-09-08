@@ -18,7 +18,7 @@ public sealed record GiftEntry(
 {
     public bool IsValid() => Guid.TryParseExact(Id, "N", out _)
         && Text(SenderId, 128) && Text(SourceId, 512)
-        && Origin is "mail" or "birthday" or "spouse" or "other"
+        && Origin is "mail" or "birthday" or "spouse" or "anniversary" or "other"
         && (SourceModId is null || Text(SourceModId, 256))
         && Year is >= 1 and <= 9999 && Day is >= 1 and <= 28
         && Season is "spring" or "summer" or "fall" or "winter"

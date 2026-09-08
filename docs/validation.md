@@ -1,5 +1,55 @@
 # Validation
 
+## Spouse integrations 0.3.0
+
+Date: **2026-09-08**. Stardew Valley **1.6.15.24356**, SMAPI **4.5.2**,
+installed SDVKit **0.9.0**, Windows x64. Accepted package:
+`.sdvkit/releases/DearlyKept-0.3.0.zip`, SHA-256:
+
+`ec6b3ecd7e4f578170d0fbae165900dce666670ae9e412b233456416617f3a48`
+
+The package was extracted into `.sdvkit/review-spouse-3/DearlyKept`. Its target
+build identity is
+`sha256:a5ebab5c3e3d0b67c71e08fe2b69e8beabb1b4f78963ebadbbb01ca20b386b24`.
+The production ZIP contains only its DLL, manifest, and two locale files.
+Manifest/i18n schema checks and all **65** pure journal checks passed.
+
+Actual gameplay evidence is under `.sdvkit/evidence/spouse/`:
+
+- Run 2: Marriage Overhaul birthday gift to inventory, three-Cookie project
+  reward with two displayed pages, birthday gift to the fridge with a full
+  backpack, and Wedding Anniversaries normal inventory delivery passed.
+  Each assertion compares the actual inventory/fridge quantity delta, exact
+  independently observed pages, sender, provider, occasion, and unique receipt.
+- Run 2 found a missing receipt in Wedding Anniversaries' native overflow path.
+  The corrected adapter observes `addItemsByMenuIfNecessary`, the actual
+  collection handoff, instead of its small single-item forwarding method.
+- Run 3 rechecked the corrected packaged artifact: Wedding Anniversaries gave
+  an Artist Bookcase through the actual full-inventory ItemGrabMenu. Three
+  displayed pages were preserved. Real mouse input claimed the item after
+  discarding fixture Stone; Escape closed the emptied menu. The quantity delta
+  and exactly one receipt passed after collection. Marriage Overhaul birthday
+  and two-page project-reward assertions also passed on this artifact.
+- The German journal shows three actual receipts. The new Hochzeitstag filter
+  shows exactly one of three. The reader shows the correct bookcase and all
+  three original English pages, retaining the receipt-time language.
+- Normal vanilla sleep fired Saving and Saved. Run 4 loaded the same fixture
+  without either producer installed and verified the full journal and inventory
+  against the pre-save checkpoint.
+
+Run 1 exposed a normalized version mismatch (`2.1` versus SMAPI's `2.1.0`) and
+a QA setup float mismatch; both were corrected before accepted gameplay.
+Run 3 also contains rejected QA commands issued before an inventory menu was
+closed; they performed no fixture mutation. Later assertions passed after
+closing the actual menu. These earlier failures are retained in the logs.
+
+The companions were source-built, and the fixture invokes their real producer
+methods directly. See [provenance and supported paths](spouse-integrations.md):
+calendar scheduling, equality to Nexus release binaries, forage/cooking chores,
+and unsupported versions are not claimed as gameplay-tested. The unchanged
+mail, Happy Birthday, controller and 150% layout gates retain their 0.2.0 evidence
+below; they were not exhaustively repeated for this integration change.
+
 ## Archive 0.2.0
 
 Date: **2026-09-08**. Target runtime: Stardew Valley **1.6.15.24356**,

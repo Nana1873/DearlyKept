@@ -16,6 +16,8 @@ internal sealed class ModEntry : Mod
         journal = new GiftJournal(helper, Monitor);
         var birthday = new HappyBirthdayIntegration(helper, Monitor, journal, () => Config.CaptureBirthdayGifts);
         birthday.Register();
+        new SpouseGiftIntegrations(helper, Monitor, journal,
+            () => Config.CaptureMarriageOverhaulGifts, () => Config.CaptureAnniversaryGifts).Register();
         var capture = new GiftCapture(helper, Monitor, journal, () => Config.CaptureMailGifts,
             () => Config.CaptureBirthdayGifts && birthday.IsActive);
         capture.Register();

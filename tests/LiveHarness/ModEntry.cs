@@ -21,6 +21,7 @@ internal sealed partial class ModEntry : Mod
         helper.Events.Content.AssetRequested += EditBirthdayFixtureGifts;
         helper.Events.Content.AssetRequested += EditArchiveFixtureMail;
         helper.Events.GameLoop.UpdateTicked += ObserveBirthdayDelivery;
+        helper.Events.GameLoop.UpdateTicked += (_, _) => ObserveSpouseText();
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearBirthdayFixtureCache();
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearArchiveFixtureCache();
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => RestoreController();
@@ -34,6 +35,9 @@ internal sealed partial class ModEntry : Mod
             string action = args.FirstOrDefault()?.ToLowerInvariant() ?? "status";
             switch (action)
             {
+                case "spouse":
+                    RunSpouseCommand(args);
+                    break;
                 case "controller":
                     RequireNoMenu();
                     if (args.ElementAtOrDefault(1) == "on")

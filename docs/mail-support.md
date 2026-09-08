@@ -1,6 +1,6 @@
 # Supported gift mail
 
-Dearly Kept 0.2.0 maps exact, case-sensitive mail IDs to sender IDs. It snapshots
+Dearly Kept 0.3.0 maps exact, case-sensitive mail IDs to sender IDs. It snapshots
 real attachments in the normal mail `LetterViewerMenu` before transfer can merge
 their stacks, then records the handoff in a separate gift journal. It skips
 Collections replays and recovered items that have already been in an inventory.
@@ -106,12 +106,12 @@ Each entry contains:
 | `Id` | Unique journal-entry ID; separate receipts have separate IDs. |
 | `SenderId` | Internal NPC name, or `Mom` / `Dad`. |
 | `SourceId` | Exact mail ID or the supported adapter's delivery identifier. |
-| `Origin` | `mail`, `birthday`, `spouse`, or `other`. The UI offers only occasions represented by matching entries. |
-| `SourceModId` | `Omegasis.HappyBirthday` for its supported gifts; otherwise `null`. |
+| `Origin` | `mail`, `birthday`, `spouse`, `anniversary`, or `other`. The UI offers only occasions represented by matching entries. |
+| `SourceModId` | The supported producer's mod ID, or `null` for ordinary mapped mail. |
 | `Year`, `Season`, `Day` | In-game receipt date. |
 | `QualifiedItemId`, `ItemName` | Item identity and a saved name for missing-item fallback. |
 | `Quantity`, `Quality` | The received amount and item quality before stack merging. |
-| `MessageText` | Optional actual letter text or observed birthday dialogue; `null` when unavailable. |
+| `MessageText` | Optional actual letter text or observed gift dialogue; `null` when unavailable. |
 
 `MessageText` is an optional, backward-compatible addition to schema 1. Older
 entries retain their data and show a translated missing-text placeholder.
