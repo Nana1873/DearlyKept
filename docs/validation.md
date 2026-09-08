@@ -1,5 +1,85 @@
 # Validation
 
+## Player archives 0.4.0
+
+Date: **2026-09-08**. Same Stardew/SMAPI runtime as below, installed SDVKit
+**0.9.0**. Tested ZIP: `.sdvkit/releases/DearlyKept-0.4.0.zip`, SHA-256:
+
+`ab8d0e6ef2c826924b2ab13658adf36836ff405417193717caf2604f2102eda0`
+
+Production target identity:
+`sha256:ef81c4d5a88c8505ba4df3f8f2207f5642c1cb1356e62bd3ab493594432ffdfe`.
+The unchanged extracted package was used throughout these checks. All 65 pure
+journal checks and SDVKit project checks passed. Evidence is retained under
+`.sdvkit/evidence/multiplayer/`.
+
+- **Network run 2:** two real local host/farmhand processes received different
+  native letters (Mom's Cookies and Evelyn's Coffee Maker). Actual item,
+  quantity, personalized full message, unique receipts, prior-history retention,
+  ordinary item metadata, and each farmer's serialized archive matched.
+  Both processes observed independent host and farmhand archives through native
+  game synchronization. The farmhand left and rejoined the same player with its
+  exact archive intact. Both players slept normally; after clean stop and pair
+  restart without reset, each full archive and inventory matched its checkpoint.
+- **Original Nexus binaries:** the user-provided Happy Birthday 3.21.4, Stardust
+  Core 3.1.1, English pack 2.0.4, Marriage Overhaul 1.7.4 and Wedding
+  Anniversaries 2.1 ZIPs were copied unchanged and hashed in
+  `.sdvkit/integration-dependencies/nexus/checksums.json`. Original DLLs were
+  staged with Content Patcher 2.9.1; Happy Birthday received previously generated
+  stock configuration files for staging consistency. No third-party files are
+  distributed in this release.
+- Original Happy Birthday NPC delivery and CP token preview passed: one real
+  Cookie, full displayed greeting, ordinary stacking, and no preview receipt.
+  Its parent tokens emitted upstream startup warnings in the blank fixture;
+  original-binary parent mail and full Happy Birthday calendar scheduling were
+  not established by this run. Concurrent birthday dialogue producers can
+  replace each other's dialogue; this run does not establish their mutual
+  compatibility.
+- Original Marriage Overhaul birthday passed after native sleep into the
+  configured birthday, with its own DayStarted handler and normal dialogue.
+  The original delayed-reward producer delivered three Cookies and retained
+  both independently observed QA-authored dialogue pages. This reward check
+  invokes the actual delivery method; it does not play a complete project quest.
+- Original Wedding Anniversaries passed native sleep into day 112 of a fixture
+  marriage, its own calendar handler, native spouse dialogue, one actual gift,
+  and both displayed pages. Exact inventory/fridge deltas, sender, occasion,
+  source, date and no item tags were checked for each spouse attempt.
+- **Storage regression:** using actual received history, the real production
+  loader/saver imported the host's legacy archive unchanged. Malformed JSON,
+  JSON null and an unsupported schema disabled recording and preserved raw
+  player data exactly instead of falling back to legacy data. The test restored
+  its original fixture state afterwards. This is an in-process loader test,
+  separate from the real restart check above.
+
+### Limits and rejected attempts
+
+Network coverage is one host plus one local loopback farmhand, using native
+mail. Third-party producer multiplayer, internet/Steam/GOG transport, late
+messages during abrupt process loss and splitscreen visual behavior are not
+verified. Capture caches and journal ownership are per screen in production;
+this alone is not a splitscreen acceptance claim.
+
+The splitscreen probe created a real second GameRunner instance, but SDVKit's
+single fixture then rejected `singlePlayer`. No further input bypassed that
+guard. The fixture was stopped/reset. Network run 1 stalled after native rejoin
+replaced Options and enabled background pause; the ordinary stop failed because
+its fallback found both a console and a game window. Recovery terminated only
+the exact PID/start-time-verified owned farmhand, then used CLI stop/reset.
+Run 2 kept the explicitly unfocused QA fixture running immediately after native
+activation and passed rejoin/save/restart. This QA workaround is not in Dearly
+Kept. A corresponding SDVKit fix is [draft PR #180](https://github.com/Nana1873/SDVKit/pull/180),
+not merged and not yet live-accepted as a new SDVKit build.
+
+The first calendar marriage probe used an unupgraded house and caused a vanilla
+missing marriage-map error. The corrected fixture upgrades the house first;
+the replacement MO calendar and WA runs passed without that error. Earlier
+menu-open assertion rejections are not counted as passes.
+
+Final owned network and single reviews were stopped/reset, with fixture reset,
+staging removal and no remaining problems confirmed. Normal saves and Mods were
+not used. Prior UI/controller/overflow coverage below remains scoped to the
+unchanged UI and capture implementations; it is not new multiplayer UI proof.
+
 ## Spouse integrations 0.3.0
 
 Date: **2026-09-08**. Stardew Valley **1.6.15.24356**, SMAPI **4.5.2**,

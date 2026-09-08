@@ -2,6 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
+using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -21,8 +22,10 @@ internal sealed class HappyBirthdayIntegration
     private readonly IMonitor monitor;
     private readonly GiftJournal journal;
     private readonly Func<bool> enabled;
-    private readonly Dictionary<object, PendingGift> pending = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<DialogueBox, Conversation> conversations = new(ReferenceEqualityComparer.Instance);
+    private readonly PerScreen<Dictionary<object, PendingGift>> screenPending = new(() => new(ReferenceEqualityComparer.Instance));
+    private readonly PerScreen<Dictionary<DialogueBox, Conversation>> screenConversations = new(() => new(ReferenceEqualityComparer.Instance));
+    private Dictionary<object, PendingGift> pending => screenPending.Value;
+    private Dictionary<DialogueBox, Conversation> conversations => screenConversations.Value;
     private FieldInfo? coreInstanceField;
     private FieldInfo? managerField;
     private FieldInfo? giftField;

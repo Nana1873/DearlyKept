@@ -55,6 +55,23 @@ English, with localized in-game strings under `i18n/`.
 
 ## Journal acceptance cases
 
+For network tests, stage `tests/MultiplayerHarness` as an explicit companion
+with `--topology network-2`. Its `dkn` commands verify the registered world,
+local farmer, target and owned process before fixture mutations. Use prepare,
+different native mail per role, actual input, assert, peers, reconnect, checkpoint,
+normal sleep in both roles, and persist after an exact pair restart without reset.
+The reconnect helper keeps the native replacement Options unpaused for this
+explicitly unfocused test, working around the documented SDVKit 0.9.0 limitation.
+Never use this companion in normal Mods. The `dks` probe is retained to document
+the rejected splitscreen experiment; it cannot provide an accepted review under
+the installed release's single-player fixture contract.
+
+Single-player `dkqa spouse calendar-birthday` / `calendar-anniversary` prepare
+an upgraded fixture home and next-day marriage event. Use ordinary `dkqa save`,
+wait for Saved/DayStarted, read the actual dialogue (anniversary: `spouse talk`),
+and `spouse assert`. `dkqa storage` exercises the real journal loader with actual
+received history and restores the fixture after legacy/invalid-data cases.
+
 - Receive a supported letter beside an identical ordinary stack. Verify normal
   merging and one journal entry with the sender, quantity, quality, item, date,
   and occasion captured before that merge changes the live item.

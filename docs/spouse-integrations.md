@@ -22,7 +22,9 @@ has control. The observer follows that exact queued display, without matching
 unrelated dialogue by text. If no matching dialogue is displayed, the gift stays
 in the archive with no message. Forage chores, cooking chores, other Marriage
 Overhaul systems, and Happy Birthday spouse-party events are outside this scope.
-Only single-player capture is supported.
+These producers have been tested in single-player. Dearly Kept isolates capture
+state per local screen, but this does not establish the producers' multiplayer
+or splitscreen compatibility.
 
 ## Dependency provenance
 
@@ -35,11 +37,12 @@ The isolated development companions were built from upstream source:
   This checkout omits a manifest; the isolated companion uses a reconstructed
   manifest with its documented mod ID and version. Producer C# was unchanged.
 
-These are source-build integration tests, not binary equivalence verification
+The initial 0.3 tests used these source builds, not binary equivalence verification
 against the downloaded Nexus archives. Neither companion, its source, nor the
 QA harness is included in the Dearly Kept release ZIP.
 
 The owned live fixture invokes the real birthday, pending-reward, and anniversary
 producer methods. It supplies a QA-authored two-page project reward and otherwise
 uses the companions' normal text and gift selection. This verifies delivery and
-display paths; it does not independently verify those mods' calendar scheduling.
+display paths. The additional 0.4 original-Nexus and calendar checks are recorded
+in [validation](validation.md).

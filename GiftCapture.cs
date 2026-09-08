@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
+using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -17,7 +18,9 @@ internal sealed class GiftCapture
     private readonly Func<bool> enabled;
     private readonly Func<bool> birthdayEnabled;
     private readonly GiftJournal journal;
-    private ConditionalWeakTable<LetterViewerMenu, Dictionary<Item, GiftEntry>> receipts = new();
+    private readonly PerScreen<ConditionalWeakTable<LetterViewerMenu, Dictionary<Item, GiftEntry>>> screenReceipts = new(() => new());
+    private ConditionalWeakTable<LetterViewerMenu, Dictionary<Item, GiftEntry>> receipts
+    { get => screenReceipts.Value; set => screenReceipts.Value = value; }
 
     public GiftCapture(IModHelper helper, IMonitor monitor, GiftJournal journal, Func<bool> enabled, Func<bool> birthdayEnabled)
     {

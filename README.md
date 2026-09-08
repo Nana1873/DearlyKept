@@ -19,7 +19,7 @@ The tested runtime and current acceptance scope are recorded in
 - Filters memories by occasion and sender, offering only choices with entries.
 - Keeps the actual gift letter or displayed gift dialogue for later reading
   in a separate, paginated message view.
-- Saves the journal separately for each save during the game's regular save.
+- Keeps a separate journal for each player in each save, persisted during the game's regular save.
 - Supports keyboard, mouse, and controller navigation, with English and German
   text. Other languages fall back to English.
 
@@ -92,13 +92,20 @@ adapter status. If K is used by another mod, choose another key or combination.
 
 ## Compatibility and removal
 
-The current scope is **single-player**. Recording is disabled in multiplayer
-and split-screen. Mail or dialogue replacements need separate compatibility
-checks when they bypass the supported delivery paths.
+Single-player and host/farmhand network play are supported. Install Dearly Kept
+on each player who wants to record gifts. Each player sees their own archive;
+the game synchronizes its storage with the host. Native mail, disconnect/rejoin,
+and saving/restarting were tested with two local network processes. Third-party
+gift producers still need their own multiplayer compatibility; their adapters
+were tested in single-player. Splitscreen state is isolated in code, but live
+acceptance is pending because SDVKit 0.9.0 rejects that test topology.
 
-Version 0.3.0 does not add item tags, patch stacking, or alter normal inventory
+Version 0.4.0 does not add item tags, patch stacking, or alter normal inventory
 tooltips. It snapshots gifts at supported delivery points and stores the journal
-in SMAPI save data. There are no new game items, maps, textures, currencies, or
+in the receiving farmer's save data. The host automatically imports a pre-0.4
+save-level archive when no player archive exists; farmhands never import it.
+Malformed or unsupported data is preserved with recording disabled for that
+session. There are no new game items, maps, textures, currencies, or
 friendship bonuses.
 
 Removing the mod leaves your items unchanged; the journal UI is unavailable

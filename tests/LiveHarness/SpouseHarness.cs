@@ -20,6 +20,13 @@ internal sealed partial class ModEntry
     {
         RequireNoMenu();
         string action = args.ElementAtOrDefault(1) ?? "assert";
+        bool calendar = action.StartsWith("calendar-");
+        if (calendar) action = action[9..];
+        if (action == "talk")
+        {
+            Game1.drawDialogue(Game1.getCharacterFromName("Leah"));
+            return;
+        }
         if (action == "assert")
         {
             Check(spouseBaseline is not null, "a spouse producer attempt exists");
@@ -37,6 +44,18 @@ internal sealed partial class ModEntry
             return;
         }
         NPC spouse = Game1.getCharacterFromName("Leah");
+        if (calendar)
+        {
+            Game1.year = 2;
+            Game1.player.HouseUpgradeLevel = 1;
+            ((FarmHouse)Utility.getHomeOfFarmer(Game1.player)).setMapForUpgradeLevel(1);
+            Game1.player.spouse = "Leah";
+            Game1.player.friendshipData["Leah"] = new Friendship(3000)
+            {
+                Status = FriendshipStatus.Married,
+                WeddingDate = new WorldDate(Game1.Date) { TotalDays = Game1.Date.TotalDays - (action == "anniversary" ? 111 : 20) }
+            };
+        }
         spousePages.Clear();
         spousePageKey = null;
         spouseBaseline = CaptureJournal();
@@ -47,6 +66,11 @@ internal sealed partial class ModEntry
         object mod = info.GetType().GetProperty("Mod")?.GetValue(info) ?? throw new InvalidOperationException("SMAPI mod instance is unavailable.");
         if (action == "anniversary")
         {
+            if (calendar)
+            {
+                Monitor.Log("DKQA calendar anniversary prepared for tomorrow. Use save, then spouse talk; the mod's own DayStarted must queue the gift dialogue.", LogLevel.Info);
+                return;
+            }
             HbMethod(mod, "PushAnniversaryText", new[] { typeof(NPC), typeof(int) }, spouse, 12);
             Check(CaptureJournal() == spouseBaseline, "pushing anniversary dialogue alone creates no receipt");
             Game1.drawDialogue(spouse);
@@ -58,11 +82,11 @@ internal sealed partial class ModEntry
             if (action == "birthday")
             {
                 SetSpouseProperty(config, "EnableBirthdaySystem", true);
-                SetSpouseProperty(config, "PlayerBirthdayDay", Game1.dayOfMonth);
+                SetSpouseProperty(config, "PlayerBirthdayDay", Game1.dayOfMonth + (calendar ? 1 : 0));
                 SetSpouseProperty(config, "PlayerBirthdaySeason", Game1.currentSeason);
                 SetSpouseProperty(config, "BirthdayGiftChance", 0f);
                 SetSpouseProperty(data, "LastBirthdayYearProcessed", -1);
-                HbMethod(mod, "Birthday_OnDayStarted", new[] { typeof(NPC) }, spouse);
+                if (!calendar) HbMethod(mod, "Birthday_OnDayStarted", new[] { typeof(NPC) }, spouse);
             }
             else if (action == "reward")
             {
@@ -70,7 +94,7 @@ internal sealed partial class ModEntry
                 SetSpouseProperty(data, "PendingRewardQty", 3);
                 SetSpouseProperty(data, "PendingRewardDay", -1);
                 SetSpouseProperty(data, "PendingRewardLine", "Here you go, @. This is an authored QA project reward.#$b#Three Cookies, with a second page to remember. $h");
-                HbMethod(mod, "Requests_DeliverPendingReward", new[] { typeof(NPC) }, spouse);
+                if (!calendar) HbMethod(mod, "Requests_DeliverPendingReward", new[] { typeof(NPC) }, spouse);
             }
             else throw new InvalidOperationException("Use spouse birthday|reward|anniversary|assert.");
         }

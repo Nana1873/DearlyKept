@@ -1,7 +1,7 @@
 # Dearly Kept — A Lasting Gift Journal
 
-Unreleased 0.3.0 description draft. See the validation report for the accepted
-artifact, actual gameplay checks, and source-built integration test scope.
+Unreleased 0.4.0 description draft. See the validation report for the tested
+artifact, original-Nexus checks, and remaining compatibility limits.
 
 **Those cookies came from Mom. Now you can keep that little memory.**
 
@@ -36,7 +36,7 @@ Press **K** while no other menu or event is open, or enter `dk` in the SMAPI
 console. The hotkey can be changed in `config.json`.
 
 The journal starts with gifts received after installation. It does not guess who
-gave you an old item or reconstruct past gifts. Each save has its own journal,
+gave you an old item or reconstruct past gifts. Each player in each save has their own journal,
 saved when the game normally saves. Quitting without saving discards that day's
 journal changes too.
 
@@ -47,8 +47,10 @@ Birthday mail needs both options enabled.
 
 ## Compatibility
 
-The current scope is single-player; recording is disabled in multiplayer and
-split-screen. Mod authors can extend the exact letter-to-sender dictionary
+Single-player and host/farmhand network play are supported; install Dearly Kept
+on each player who wants to record gifts. Network testing covers native mail,
+rejoining, saving and restarting. Third-party gift mods need their own multiplayer
+support; splitscreen is not yet live-verified. Mod authors can extend the exact letter-to-sender dictionary
 through Content Patcher for the normal mail viewer. A read-only SMAPI API exposes
 `GetGiftCount()` and `GetGiftsJson()` for other mods.
 
@@ -85,7 +87,7 @@ Stardew Valley.
 - Lead screenshot: the journal with Mom and Evelyn entries.
 - Second screenshot: the message reader showing an actual recorded letter.
 - Optional third screenshot: the German archive with an active filter.
-- Use the accepted 0.3.0 integration screenshots and its exact tested ZIP; the old
+- Use the 0.3.0 integration screenshots and the tested 0.4.0 ZIP; the old
   item-tooltip screenshots describe the internal prototype.
 - Add the actual repository and Nexus update IDs only once those pages exist.
 - The September 8 journal research found adjacent letter/dialogue archives;

@@ -1,7 +1,7 @@
 {
   "Name": "Dearly Kept",
   "Author": "Nana1873",
-  "Version": "0.3.0",
+  "Version": "0.4.0",
   "Description": "A lasting gift journal: remember senders, gifts, dates and occasions without using inventory space.",
   "UniqueID": "Nana1873.DearlyKept",
   "EntryDll": "DearlyKept.dll",

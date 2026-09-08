@@ -1,5 +1,6 @@
 using System.Text.Json;
 using StardewModdingAPI;
+using StardewModdingAPI.Utilities;
 using StardewValley;
 
 namespace DearlyKept;
@@ -7,15 +8,17 @@ namespace DearlyKept;
 internal sealed class GiftJournal
 {
     private const string SaveKey = "gift-journal";
+    internal const string PlayerDataKey = "Nana1873.DearlyKept/GiftJournal";
     private readonly IModHelper helper;
     private readonly IMonitor monitor;
-    private readonly GiftLedger ledger = new();
-    private Farmer? owner;
+    private readonly PerScreen<PlayerState> screens = new(() => new PlayerState());
+    private GiftLedger ledger => screens.Value.Ledger;
+    private Farmer? owner { get => screens.Value.Owner; set => screens.Value.Owner = value; }
 
     public IReadOnlyList<GiftEntry> Entries => ledger.Entries;
     public int Revision => ledger.Revision;
-    public bool CanRecord => owner is not null && Context.IsWorldReady && Context.IsMainPlayer
-        && !Context.IsMultiplayer && ReferenceEquals(owner, Game1.player);
+    public bool CanRecord => owner is not null && Context.IsWorldReady
+        && Game1.player.IsLocalPlayer && ReferenceEquals(owner, Game1.player);
 
     public GiftJournal(IModHelper helper, IMonitor monitor)
     {
@@ -23,18 +26,22 @@ internal sealed class GiftJournal
         this.monitor = monitor;
         helper.Events.GameLoop.SaveLoaded += (_, _) => Load();
         helper.Events.GameLoop.Saving += (_, _) => Save();
-        helper.Events.GameLoop.ReturnedToTitle += (_, _) => { owner = null; ledger.Clear(); };
+        helper.Events.GameLoop.ReturnedToTitle += (_, _) => screens.Value = new PlayerState();
     }
 
     private void Load()
     {
         owner = null;
         ledger.Clear();
-        if (!Context.IsMainPlayer || Context.IsMultiplayer)
+        if (!Game1.player.IsLocalPlayer)
             return;
         try
         {
-            JournalData data = helper.Data.ReadSaveData<JournalData>(SaveKey) ?? new JournalData();
+            // Farmer.modData is synchronized by the game and survives farmhand disconnects.
+            // Only the host's local player may import the pre-multiplayer save-level archive.
+            JournalData data = Game1.player.modData.TryGetValue(PlayerDataKey, out string raw)
+                ? JsonSerializer.Deserialize<JournalData>(raw) ?? throw new InvalidDataException("Null player journal.")
+                : Context.IsMainPlayer ? helper.Data.ReadSaveData<JournalData>(SaveKey) ?? new JournalData() : new JournalData();
             int rejected = ledger.Load(data);
             if (rejected > 0)
             {
@@ -52,7 +59,18 @@ internal sealed class GiftJournal
     private void Save()
     {
         if (CanRecord)
-            helper.Data.WriteSaveData(SaveKey, ledger.Snapshot());
+        {
+            try
+            {
+                string raw = JsonSerializer.Serialize(ledger.Snapshot());
+                if (!owner!.modData.TryGetValue(PlayerDataKey, out string previous) || previous != raw)
+                    owner.modData[PlayerDataKey] = raw;
+            }
+            catch (Exception ex)
+            {
+                monitor.Log($"Couldn't synchronize the current player's gift journal: {ex.Message}", LogLevel.Error);
+            }
+        }
     }
 
     public GiftEntry? CreateEntry(Item item, string senderId, string sourceId, string origin, string? sourceModId, string? messageText = null)
@@ -67,12 +85,26 @@ internal sealed class GiftJournal
     public void Record(GiftEntry entry)
     {
         if (CanRecord && ledger.Add(entry))
+        {
+            Save();
             monitor.Log($"Recorded {entry.QualifiedItemId} x{entry.Quantity} from {entry.SenderId} ({entry.SourceId}) in the gift journal.", LogLevel.Trace);
+        }
     }
 
-    public bool UpdateMessage(string id, string messageText) => CanRecord && ledger.UpdateMessage(id, messageText);
+    public bool UpdateMessage(string id, string messageText)
+    {
+        if (!CanRecord || !ledger.UpdateMessage(id, messageText)) return false;
+        Save();
+        return true;
+    }
 
     public string GetGiftsJson() => JsonSerializer.Serialize(Entries);
+
+    private sealed class PlayerState
+    {
+        public GiftLedger Ledger { get; } = new();
+        public Farmer? Owner { get; set; }
+    }
 }
 
 /// <summary>Read-only journal access for integrations and diagnostics.</summary>

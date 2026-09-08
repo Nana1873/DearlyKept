@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using StardewModdingAPI;
+using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -19,8 +20,10 @@ internal sealed class SpouseGiftIntegrations
     private readonly GiftJournal journal;
     private readonly Func<bool> marriageEnabled;
     private readonly Func<bool> anniversaryEnabled;
-    private ConditionalWeakTable<Dialogue, ReceiptContext> dialogues = new();
-    private readonly Dictionary<DialogueBox, Transcript> conversations = new(ReferenceEqualityComparer.Instance);
+    private readonly PerScreen<ConditionalWeakTable<Dialogue, ReceiptContext>> screenDialogues = new(() => new());
+    private readonly PerScreen<Dictionary<DialogueBox, Transcript>> screenConversations = new(() => new(ReferenceEqualityComparer.Instance));
+    private ConditionalWeakTable<Dialogue, ReceiptContext> dialogues { get => screenDialogues.Value; set => screenDialogues.Value = value; }
+    private Dictionary<DialogueBox, Transcript> conversations => screenConversations.Value;
     private bool reportedError;
 
     public SpouseGiftIntegrations(IModHelper helper, IMonitor monitor, GiftJournal journal,

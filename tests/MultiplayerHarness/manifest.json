@@ -1,0 +1,10 @@
+{
+  "Name": "Dearly Kept Multiplayer QA",
+  "Author": "Nana1873",
+  "Version": "0.1.0",
+  "Description": "Owned SDVKit fixture tests only. Never distribute with the mod.",
+  "UniqueID": "Nana1873.DearlyKept.MultiplayerHarness",
+  "EntryDll": "MultiplayerHarness.dll",
+  "MinimumApiVersion": "4.5.0",
+  "Dependencies": [{ "UniqueID": "Nana1873.DearlyKept", "IsRequired": true }]
+}

@@ -35,6 +35,9 @@ internal sealed partial class ModEntry : Mod
             string action = args.FirstOrDefault()?.ToLowerInvariant() ?? "status";
             switch (action)
             {
+                case "storage":
+                    CheckPlayerStorage();
+                    break;
                 case "spouse":
                     RunSpouseCommand(args);
                     break;
