@@ -1,5 +1,52 @@
 # Validation
 
+## Extended network acceptance and SDVKit fix
+
+Also tested on **2026-09-08**, with the exact unchanged 0.4.0 package identified
+below. Production code and the release ZIP did not change; the network harness
+and acceptance documentation were extended.
+
+| Original producer | Host | Farmhand | Result |
+| --- | --- | --- | --- |
+| Marriage Overhaul 1.7.4 birthday | Leah: Salad x1 | Penny: Pancakes x1 | Passed |
+| Marriage Overhaul 1.7.4 delayed reward | Leah: Cookies x2 | Penny: Cookies x3 | Passed, both authored dialogue pages |
+| Wedding Anniversaries 2.1 | Leah: Stump Seat x1 | Penny: Retro Bookcase x1 | Passed, all three displayed pages per player |
+| Happy Birthday 3.21.4 | Evelyn: Cookie x1 | Gus: Pancakes x3 | Passed, original personalized greeting |
+
+Each assertion compares the exact new receipt count, unchanged prior history,
+sender/provider/occasion, independently observed dialogue, actual local inventory
+delta and serialized data on the receiving farmer. Both peers observed separate
+archives through native game synchronization. The spouse run used MO and WA
+together; the HB run used its original ZIP, Stardust Core 3.1.1, CP 2.9.1 and the
+original English pack 2.0.4 separately to avoid overlapping birthday producers.
+
+The MO/WA tests invoke their actual delivery/anniversary-dialogue producers on
+each peer; they do not establish natural multiplayer spouse/calendar scheduling
+or complete quest progression. HB starts native NPC dialogue after configuring
+each local BirthdayManager and friendship; its own handler delivers the gifts.
+The earlier natural calendar checks were single-player. Internet transports,
+simultaneous sources replacing one another's dialogue, and splitscreen remain
+outside accepted coverage.
+
+Native sleep, clean pair stop and exact restart without reset preserved both
+complete three-entry MO/WA journals and their inventories. Visual inspection of
+both archives and message readers confirmed host-only Leah / farmhand-only Penny
+entries and full corresponding anniversary text. Evidence:
+`.sdvkit/evidence/multiplayer/spouse-network-*`, `birthday-network-*`,
+`host-archive.png`, `farmhand-archive.png`, `host-reader.png`, `farmhand-reader.png`.
+All owned reviews ended with normal stop/reset, fixture reset, staging removal,
+and no remaining problems.
+
+SDVKit [PR #180](https://github.com/Nana1873/SDVKit/pull/180) was live-tested in
+its own isolated source-build lab, then merged as
+`a93c6b03c562d793f8b3ce03c68165fa32602131` with user authorization. The actual
+Harmony hook kept `pauseWhenOutOfFocus=false` immediately after native rejoin,
+with no QA options override; the farmhand retained its exact letter archive.
+Normal stop/reset passed. PR CI and the game-bound build passed. The installed
+0.9.0 release was not modified; a merge is not a published release update.
+The missing owned splitscreen review capability is tracked separately in
+[SDVKit #181](https://github.com/Nana1873/SDVKit/issues/181).
+
 ## Player archives 0.4.0
 
 Date: **2026-09-08**. Same Stardew/SMAPI runtime as below, installed SDVKit
@@ -53,8 +100,8 @@ journal checks and SDVKit project checks passed. Evidence is retained under
 
 ### Limits and rejected attempts
 
-Network coverage is one host plus one local loopback farmhand, using native
-mail. Third-party producer multiplayer, internet/Steam/GOG transport, late
+Initial network coverage was one host plus one local loopback farmhand using native
+mail; the extended producer checks are above. Internet/Steam/GOG transport, late
 messages during abrupt process loss and splitscreen visual behavior are not
 verified. Capture caches and journal ownership are per screen in production;
 this alone is not a splitscreen acceptance claim.
@@ -67,8 +114,8 @@ its fallback found both a console and a game window. Recovery terminated only
 the exact PID/start-time-verified owned farmhand, then used CLI stop/reset.
 Run 2 kept the explicitly unfocused QA fixture running immediately after native
 activation and passed rejoin/save/restart. This QA workaround is not in Dearly
-Kept. A corresponding SDVKit fix is [draft PR #180](https://github.com/Nana1873/SDVKit/pull/180),
-not merged and not yet live-accepted as a new SDVKit build.
+Kept. The subsequent live acceptance and merge of the corresponding
+[SDVKit PR #180](https://github.com/Nana1873/SDVKit/pull/180) are recorded above.
 
 The first calendar marriage probe used an unupgraded house and caused a vanilla
 missing marriage-map error. The corrected fixture upgrades the house first;

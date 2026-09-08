@@ -22,9 +22,11 @@ has control. The observer follows that exact queued display, without matching
 unrelated dialogue by text. If no matching dialogue is displayed, the gift stays
 in the archive with no message. Forage chores, cooking chores, other Marriage
 Overhaul systems, and Happy Birthday spouse-party events are outside this scope.
-These producers have been tested in single-player. Dearly Kept isolates capture
-state per local screen, but this does not establish the producers' multiplayer
-or splitscreen compatibility.
+These delivery adapters have been tested in single-player and on both peers of
+an isolated host/farmhand session. Native save/restart preserved the separate
+archives. The network harness invokes real producers directly; natural calendar
+scheduling was tested only in single-player. This does not establish complete
+producer multiplayer behavior or splitscreen compatibility.
 
 ## Dependency provenance
 

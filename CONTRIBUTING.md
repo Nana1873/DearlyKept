@@ -62,6 +62,12 @@ different native mail per role, actual input, assert, peers, reconnect, checkpoi
 normal sleep in both roles, and persist after an exact pair restart without reset.
 The reconnect helper keeps the native replacement Options unpaused for this
 explicitly unfocused test, working around the documented SDVKit 0.9.0 limitation.
+Use `dkn reconnect-strict` against a build containing SDVKit #180 to assert the
+actual fix without that override. `dkn gift birthday|reward|anniversary|happy-birthday`
+starts a real selected producer in the guarded network fixture. Read the actual
+dialogue with normal input, then `dkn giftassert` checks the receiving player's
+inventory, transcript, archive ownership and prior history. These producer tests
+do not replace natural calendar or complete quest acceptance.
 Never use this companion in normal Mods. The `dks` probe is retained to document
 the rejected splitscreen experiment; it cannot provide an accepted review under
 the installed release's single-player fixture contract.

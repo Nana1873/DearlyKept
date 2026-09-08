@@ -18,6 +18,7 @@ internal sealed partial class ModEntry : Mod
     private Client? reconnectClient;
     private int reconnectStep;
     private int reconnectTicks;
+    private bool strictReconnect;
     private string Role => string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SDVKIT_NETWORK_TWO_ROLE"))
         ? "single" : Environment.GetEnvironmentVariable("SDVKIT_NETWORK_TWO_ROLE")!;
     private string Lab
@@ -32,9 +33,10 @@ internal sealed partial class ModEntry : Mod
     private string CheckpointPath => Path.Combine(Lab, "network-2", Role, "runtime", "dearly-kept-checkpoint.json");
     public override void Entry(IModHelper helper)
     {
-        helper.ConsoleCommands.Add("dkn", "Owned network fixture: prepare | mail <key> | assert | peers <host> <farmhand> | checkpoint | persist | sleep | reconnect | report", Run);
+        helper.ConsoleCommands.Add("dkn", "Owned network fixture: prepare | mail <key> | assert | gift <birthday|reward|anniversary|happy-birthday> | giftassert | peers <host> <farmhand> | checkpoint | persist | sleep | reconnect | reconnect-strict | report", Run);
         helper.Events.GameLoop.UpdateTicked += (_, _) => UpdateReconnect();
         RegisterSplit(helper);
+        helper.Events.GameLoop.UpdateTicked += (_, _) => ObserveGiftPages();
     }
     private void Guard()
     {
@@ -78,6 +80,8 @@ internal sealed partial class ModEntry : Mod
             Guard();
             switch (args.FirstOrDefault() ?? "report")
             {
+                case "gift": StartGift(args[1]); break;
+                case "giftassert": AssertGift(); break;
                 case "prepare":
                     NoMenu(); baseline = Journal; expected.Clear();
                     for (int i = 0; i < Game1.player.Items.Count; i++) Game1.player.Items[i] = null;
@@ -130,10 +134,12 @@ internal sealed partial class ModEntry : Mod
                     break;
                 case "sleep":
                     NoMenu(); Check(Game1.currentLocation.answerDialogueAction("Sleep_Yes", Array.Empty<string>()), "native sleep accepted"); break;
+                case "reconnect-strict":
                 case "reconnect":
                     NoMenu();
                     if (Context.IsMainPlayer || reconnectStep != 0) throw new InvalidOperationException("Only the joined farmhand can reconnect.");
                     reconnectPlayer = Game1.player.UniqueMultiplayerID; reconnectJournal = Journal;
+                    strictReconnect = args[0] == "reconnect-strict";
                     reconnectTicks = 0; reconnectStep = 1; Game1.ExitToTitle(); break;
                 case "report": break;
                 default: throw new InvalidOperationException("Unknown fixture command.");
@@ -176,7 +182,10 @@ internal sealed partial class ModEntry : Mod
                 Monitor.Log($"DKNET reconnect options after native activation: pauseWhenOutOfFocus={Game1.options.pauseWhenOutOfFocus}.", LogLevel.Info);
                 // Native activation replaces Options before the next SMAPI update.
                 // Keep this explicitly unfocused fixture running through that transition.
-                Game1.options.pauseWhenOutOfFocus = false;
+                if (strictReconnect)
+                    Check(!Game1.options.pauseWhenOutOfFocus, "SDVKit preserves background execution without a QA options override");
+                else
+                    Game1.options.pauseWhenOutOfFocus = false;
                 reconnectStep = 3;
             }
             else if (reconnectStep == 3 && Context.IsWorldReady)

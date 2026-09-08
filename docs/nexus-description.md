@@ -49,8 +49,9 @@ Birthday mail needs both options enabled.
 
 Single-player and host/farmhand network play are supported; install Dearly Kept
 on each player who wants to record gifts. Network testing covers native mail,
-rejoining, saving and restarting. Third-party gift mods need their own multiplayer
-support; splitscreen is not yet live-verified. Mod authors can extend the exact letter-to-sender dictionary
+rejoining, saving and restarting, plus the listed mod gift deliveries on both
+peers. This does not cover every producer's multiplayer calendar or quest logic;
+splitscreen is not yet live-verified. Mod authors can extend the exact letter-to-sender dictionary
 through Content Patcher for the normal mail viewer. A read-only SMAPI API exposes
 `GetGiftCount()` and `GetGiftsJson()` for other mods.
 

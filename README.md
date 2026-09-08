@@ -95,9 +95,11 @@ adapter status. If K is used by another mod, choose another key or combination.
 Single-player and host/farmhand network play are supported. Install Dearly Kept
 on each player who wants to record gifts. Each player sees their own archive;
 the game synchronizes its storage with the host. Native mail, disconnect/rejoin,
-and saving/restarting were tested with two local network processes. Third-party
-gift producers still need their own multiplayer compatibility; their adapters
-were tested in single-player. Splitscreen state is isolated in code, but live
+and saving/restarting were tested with two local network processes. The supported
+Happy Birthday, Marriage Overhaul and Wedding Anniversaries deliveries were also
+tested on both peers, including separate texts and inventories. These checks do
+not establish every producer's multiplayer calendar or quest behavior.
+Splitscreen state is isolated in code, but live
 acceptance is pending because SDVKit 0.9.0 rejects that test topology.
 
 Version 0.4.0 does not add item tags, patch stacking, or alter normal inventory
