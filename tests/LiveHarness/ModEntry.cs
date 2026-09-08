@@ -35,6 +35,15 @@ internal sealed partial class ModEntry : Mod
             string action = args.FirstOrDefault()?.ToLowerInvariant() ?? "status";
             switch (action)
             {
+                case "display": DisplayProbe(args); break;
+                case "seedarchive": SeedArchive(args); break;
+                case "uiprobe": ProbeArchive(); break;
+                case "searchprobe": SearchProbe(args); break;
+                case "openprobe": OpenArchiveTimed(); break;
+                case "collision": CollisionProbe(args, owned); break;
+                case "savefault": SaveFault(); break;
+                case "saverecover": SaveRecover(); break;
+                case "overlong": OverlongMail(args); break;
                 case "storage":
                     CheckPlayerStorage();
                     break;

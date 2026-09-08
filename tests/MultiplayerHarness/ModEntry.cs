@@ -18,6 +18,11 @@ internal sealed partial class ModEntry : Mod
     private Client? reconnectClient;
     private int reconnectStep;
     private int reconnectTicks;
+    private int reconnectDelay = 180;
+    private Farmer? offlineFarmer;
+    private string? offlineJournal;
+    private int offlineSaveStep;
+    private int offlineTicks;
     private bool strictReconnect;
     private string Role => string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SDVKIT_NETWORK_TWO_ROLE"))
         ? "single" : Environment.GetEnvironmentVariable("SDVKIT_NETWORK_TWO_ROLE")!;
@@ -35,6 +40,19 @@ internal sealed partial class ModEntry : Mod
     {
         helper.ConsoleCommands.Add("dkn", "Owned network fixture: prepare | mail <key> | assert | gift <birthday|reward|anniversary|happy-birthday> | giftassert | peers <host> <farmhand> | checkpoint | persist | sleep | reconnect | reconnect-strict | report", Run);
         helper.Events.GameLoop.UpdateTicked += (_, _) => UpdateReconnect();
+        helper.Events.GameLoop.UpdateTicked += (_, _) => UpdateOfflineSave();
+        helper.Events.GameLoop.Saved += (_, _) =>
+        {
+            if (offlineSaveStep != 2) return;
+            try
+            {
+                Guard();
+                Check(Game1.getOnlineFarmers().Count() == 1 && RawEntries(offlineFarmer!) == offlineJournal,
+                    "host saved with the farmhand offline and preserved its complete journal");
+                offlineSaveStep = 0;
+            }
+            catch (Exception ex) { offlineSaveStep = 0; Monitor.Log("DKNET OFFLINE SAVE FAIL: " + ex, LogLevel.Error); }
+        };
         RegisterSplit(helper);
         helper.Events.GameLoop.UpdateTicked += (_, _) => ObserveGiftPages();
     }
@@ -80,7 +98,18 @@ internal sealed partial class ModEntry : Mod
             Guard();
             switch (args.FirstOrDefault() ?? "report")
             {
+                case "borderless": Game1.options.setWindowedOption(0); break;
+                case "project": ProjectCheck(args[1]); break;
+                case "offline-save":
+                    NoMenu();
+                    Check(Context.IsMainPlayer && Game1.getOnlineFarmers().Count() == 2, "host arms offline save while both fixture players are present");
+                    offlineFarmer = Game1.getOnlineFarmers().Single(p => p != Game1.player);
+                    offlineJournal = RawEntries(offlineFarmer);
+                    Check(Count(offlineFarmer) > 0, "offline-save fixture includes farmhand gift history");
+                    offlineTicks = 0; offlineSaveStep = 1;
+                    break;
                 case "gift": StartGift(args[1]); break;
+                case "gift-talk": NoMenu(); Game1.drawDialogue(Game1.getCharacterFromName(giftSender)); break;
                 case "giftassert": AssertGift(); break;
                 case "prepare":
                     NoMenu(); baseline = Journal; expected.Clear();
@@ -130,16 +159,19 @@ internal sealed partial class ModEntry : Mod
                 case "persist":
                     NoMenu(); Checkpoint saved = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(CheckpointPath))!;
                     Check(saved.Game == Game1.uniqueIDForThisGame && saved.Player == Game1.player.UniqueMultiplayerID, "checkpoint belongs to the exact local player and world");
-                    Check(saved.Journal == Journal && saved.Items == Items(), "full player journal and inventory survived restart");
+                    Check(saved.Journal == Journal, "full player journal survived restart");
+                    Check(saved.Items == Items(), "occupied inventory slots survived restart");
                     break;
                 case "sleep":
                     NoMenu(); Check(Game1.currentLocation.answerDialogueAction("Sleep_Yes", Array.Empty<string>()), "native sleep accepted"); break;
                 case "reconnect-strict":
+                case "reconnect-delayed":
                 case "reconnect":
                     NoMenu();
                     if (Context.IsMainPlayer || reconnectStep != 0) throw new InvalidOperationException("Only the joined farmhand can reconnect.");
                     reconnectPlayer = Game1.player.UniqueMultiplayerID; reconnectJournal = Journal;
                     strictReconnect = args[0] == "reconnect-strict";
+                    reconnectDelay = args[0] == "reconnect-delayed" ? 1800 : 180;
                     reconnectTicks = 0; reconnectStep = 1; Game1.ExitToTitle(); break;
                 case "report": break;
                 default: throw new InvalidOperationException("Unknown fixture command.");
@@ -155,14 +187,14 @@ internal sealed partial class ModEntry : Mod
         return data.RootElement.GetProperty("Gifts").GetRawText();
     }
     private static int Count(Farmer player) { using JsonDocument d = JsonDocument.Parse(RawEntries(player)); return d.RootElement.GetArrayLength(); }
-    private static string Items() => JsonSerializer.Serialize(Game1.player.Items.Select(i => i is null ? null : new { i.QualifiedItemId, i.Stack, i.Quality }));
+    private static string Items() => JsonSerializer.Serialize(Game1.player.Items.Select((i, slot) => i is null ? null : new { Slot = slot, i.QualifiedItemId, i.Stack, i.Quality }).Where(i => i is not null));
     private void UpdateReconnect()
     {
         if (reconnectStep == 0) return;
         try
         {
             if (++reconnectTicks > 7200) throw new TimeoutException("Owned farmhand reconnect timed out.");
-            if (reconnectStep == 1 && reconnectTicks > 180 && Game1.activeClickableMenu is TitleMenu && TitleMenu.subMenu is null)
+            if (reconnectStep == 1 && reconnectTicks > reconnectDelay && Game1.activeClickableMenu is TitleMenu && TitleMenu.subMenu is null)
             {
                 reconnectClient = (Client)typeof(Multiplayer).GetMethod("InitClient", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!
                     .Invoke(typeof(Game1).GetField("multiplayer", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)!.GetValue(null), new object[] { new LidgrenClient("127.0.0.1") })!;
@@ -195,6 +227,20 @@ internal sealed partial class ModEntry : Mod
             }
         }
         catch (Exception ex) { reconnectStep = 0; Monitor.Log("DKNET RECONNECT FAIL: " + ex, LogLevel.Error); }
+    }
+    private void UpdateOfflineSave()
+    {
+        if (offlineSaveStep == 0) return;
+        try
+        {
+            if (++offlineTicks > 7200) throw new TimeoutException("Offline-save fixture timed out.");
+            if (offlineSaveStep != 1 || Game1.getOnlineFarmers().Count() != 1) return;
+            Guard(); NoMenu();
+            Check(RawEntries(offlineFarmer!) == offlineJournal, "farmhand disconnect preserved the host's synchronized copy");
+            offlineSaveStep = 2;
+            Check(Game1.currentLocation.answerDialogueAction("Sleep_Yes", Array.Empty<string>()), "host's native sleep accepted with farmhand offline");
+        }
+        catch (Exception ex) { offlineSaveStep = 0; Monitor.Log("DKNET OFFLINE SAVE FAIL: " + ex, LogLevel.Error); }
     }
     private sealed record ExpectedGift(string Source, string Item, int Quantity, string Message);
     private sealed record Checkpoint(ulong Game, long Player, string Journal, string Items);

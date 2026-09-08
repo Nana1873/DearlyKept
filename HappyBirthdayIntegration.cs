@@ -176,7 +176,7 @@ internal sealed class HappyBirthdayIntegration
             {
                 if (delivery.Dropped)
                 {
-                    GiftEntry entry = delivery.Entry with { MessageText = conversation?.Text };
+                    GiftEntry entry = delivery.Entry with { MessageText = conversation?.Text, MessageIncomplete = conversation?.AtLengthLimit == true };
                     integration.journal.Record(entry);
                     conversation?.ReceiptIds.Add(entry.Id);
                 }
@@ -222,7 +222,14 @@ internal sealed class HappyBirthdayIntegration
             return;
         string? page = GiftMessage.Normalize(box.getCurrentString());
         if (page is null)
+        {
+            if (box.getCurrentString().Length > GiftMessage.MaximumLength)
+            {
+                conversation.AtLengthLimit = true;
+                foreach (string id in conversation.ReceiptIds) journal.MarkMessageIncomplete(id);
+            }
             return;
+        }
         int index = box.characterDialogue.currentDialogueIndex;
         string[] remaining = box.characterDialoguesBrokenUp.ToArray();
         if (conversation.LastIndex == index && conversation.LastPage == page
@@ -235,6 +242,7 @@ internal sealed class HappyBirthdayIntegration
         if (transcript is null)
         {
             conversation.AtLengthLimit = true;
+            foreach (string id in conversation.ReceiptIds) journal.MarkMessageIncomplete(id);
             return;
         }
         conversation.Text = transcript;
@@ -345,7 +353,7 @@ internal sealed class HappyBirthdayIntegration
             // Successful close clears the queued reference only after the game's handoff.
             // A rejected gift may have been rerolled during close; use the newest tracked snapshot.
             if (integration.CanCapture && ReferenceEquals(gift.Player, Game1.player))
-                integration.journal.Record(gift.Entry with { MessageText = gift.Conversation?.Text });
+                integration.journal.Record(gift.Entry with { MessageText = gift.Conversation?.Text, MessageIncomplete = gift.Conversation?.AtLengthLimit == true });
         }
         catch (Exception ex) { instance?.Report(ex); }
     }

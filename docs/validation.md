@@ -1,5 +1,9 @@
 # Validation
 
+The 0.5 candidate adds search, selectors, settings and display fixes. Its current
+evidence and remaining gates are in [0.5 readiness](readiness-0.5.md); the accepted
+0.4 artifact below is retained separately.
+
 ## Extended network acceptance and SDVKit fix
 
 Also tested on **2026-09-08**, with the exact unchanged 0.4.0 package identified

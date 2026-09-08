@@ -34,7 +34,7 @@ exercises the same packaged production files that users receive. From the
 workspace root, with no review running:
 
 ```powershell
-Expand-Archive -LiteralPath '.\workspaces\DearlyKept\.sdvkit\packages\DearlyKept 0.2.0.zip' -DestinationPath '.\workspaces\DearlyKept\.sdvkit\review-new'
+Expand-Archive -LiteralPath '.\workspaces\DearlyKept\.sdvkit\packages\DearlyKept 0.5.0.zip' -DestinationPath '.\workspaces\DearlyKept\.sdvkit\review-new'
 .\sdvkit.cmd lab test-save --topology single --json
 .\sdvkit.cmd project review start .\workspaces\DearlyKept\.sdvkit\review-new\DearlyKept --topology single --test-save --companion .\workspaces\DearlyKept\tests\LiveHarness --json
 .\sdvkit.cmd project review status --json
@@ -48,6 +48,10 @@ Use a new extraction directory for each candidate. For persistence, first save
 through normal sleep, then stop and restart without resetting the fixture.
 Reset only after all acceptance work ends. A forced save helper alone does not
 exercise the regular `Saving` lifecycle.
+
+In this shared workspace, use borderless only. `dkqa display borderless` and
+`dkqa display scale 100|125|150|200|250|300` exercise layout without changing
+the desktop resolution. Do not use exclusive fullscreen or display-mode APIs.
 
 Generated builds, test output, packages, logs, and screenshots belong below the
 owning project's ignored `.sdvkit/` directory. Keep source and documentation in

@@ -61,6 +61,7 @@ internal sealed class SpouseGiftIntegrations
             Patch(h, Required(type, "Requests_DeliverPendingReward", typeof(NPC)), nameof(BeginReward), null, nameof(EndContext));
             Patch(h, Required(type, "GiveItemToPlayerOrFridge", typeof(Item)), nameof(BeforeMarriageItem), nameof(AfterMarriageItem));
             Patch(h, Required(type, "QueueOrShow", typeof(Action)), nameof(WrapDisplay));
+            Patch(h, Required(typeof(Game1), nameof(Game1.drawDialogue), typeof(NPC)), nameof(BeforeMarriageDialogue));
         });
         InstallAdapter(AnniversaryId, "2.1.0", "WeddingAnniversaries.ModEntry", (h, type) =>
         {
@@ -152,7 +153,7 @@ internal sealed class SpouseGiftIntegrations
         {
             if (quantity > 0 && instance?.CanCapture(delivery.Context) == true)
             {
-                GiftEntry entry = delivery.Entry with { Quantity = quantity, MessageText = delivery.Context.Text };
+                GiftEntry entry = delivery.Entry with { Quantity = quantity, MessageText = delivery.Context.Text, MessageIncomplete = delivery.Context.MessageIncomplete };
                 instance.journal.Record(entry);
                 delivery.Context.ReceiptIds.Add(entry.Id);
             }
@@ -167,15 +168,26 @@ internal sealed class SpouseGiftIntegrations
         show = () =>
         {
             IClickableMenu? before = Game1.activeClickableMenu;
-            original();
+            ReceiptContext? previous = current;
+            current = context;
+            try { original(); }
+            finally { current = previous; }
             try
             {
                 if (instance?.CanCapture(context) == true && Game1.activeClickableMenu is DialogueBox box
-                    && !ReferenceEquals(before, box) && box.characterDialogue?.speaker?.Name == context.Sender)
+                    && !ReferenceEquals(before, box) && box.characterDialogue is { } dialogue
+                    && instance.dialogues.TryGetValue(dialogue, out ReceiptContext? bound) && ReferenceEquals(bound, context))
                     instance.Attach(box, context);
             }
             catch (Exception ex) { instance?.Report(ex); }
         };
+    }
+
+    private static void BeforeMarriageDialogue(NPC speaker)
+    {
+        if (current is not { ModId: MarriageId } context || instance?.CanCapture(context) != true
+            || speaker.Name != context.Sender || !speaker.CurrentDialogue.TryPeek(out Dialogue? dialogue)) return;
+        instance.dialogues.GetValue(dialogue, _ => context);
     }
 
     private static void BeforeAnniversary(NPC npc, out Dialogue? __state) => __state = npc.CurrentDialogue.TryPeek(out Dialogue? d) ? d : null;
@@ -215,7 +227,7 @@ internal sealed class SpouseGiftIntegrations
 
     private void Attach(DialogueBox box, ReceiptContext context)
     {
-        if (!conversations.ContainsKey(box)) conversations.Add(box, new Transcript(context));
+        if (!conversations.ContainsKey(box)) conversations.Add(box, new Transcript(context) { Original = box.characterDialogue });
         ObserveBox(box);
     }
     private void Observe()
@@ -233,18 +245,32 @@ internal sealed class SpouseGiftIntegrations
             if (!instance.conversations.TryGetValue(__instance, out Transcript? transcript))
             {
                 if (!instance.dialogues.TryGetValue(dialogue, out ReceiptContext? context)) return;
-                instance.conversations.Add(__instance, transcript = new Transcript(context));
+                instance.conversations.Add(__instance, transcript = new Transcript(context) { Original = dialogue });
             }
+            if (!ReferenceEquals(transcript.Original, dialogue)) return;
             if (!instance.CanCapture(transcript.Context) || transcript.Full) return;
             string? page = GiftMessage.Normalize(__instance.getCurrentString());
-            if (page is null) return;
+            if (page is null)
+            {
+                if (__instance.getCurrentString().Length > GiftMessage.MaximumLength)
+                {
+                    transcript.Full = true; transcript.Context.MessageIncomplete = true;
+                    foreach (string id in transcript.Context.ReceiptIds) instance.journal.MarkMessageIncomplete(id);
+                }
+                return;
+            }
             string[] remaining = __instance.characterDialoguesBrokenUp.ToArray();
             if (transcript.Index == dialogue.currentDialogueIndex && transcript.Page == page && transcript.Remaining.SequenceEqual(remaining)) return;
             transcript.Index = dialogue.currentDialogueIndex;
             transcript.Page = page;
             transcript.Remaining = remaining;
             string? text = GiftMessage.Normalize(transcript.Context.Text is null ? page : transcript.Context.Text + "\n\n" + page);
-            if (text is null) { transcript.Full = true; return; }
+            if (text is null)
+            {
+                transcript.Full = true; transcript.Context.MessageIncomplete = true;
+                foreach (string id in transcript.Context.ReceiptIds) instance.journal.MarkMessageIncomplete(id);
+                return;
+            }
             transcript.Context.Text = text;
             foreach (string id in transcript.Context.ReceiptIds) instance.journal.UpdateMessage(id, text);
         }
@@ -262,11 +288,13 @@ internal sealed class SpouseGiftIntegrations
         public Dictionary<Item, GiftEntry> Items { get; } = new(ReferenceEqualityComparer.Instance);
         public HashSet<string> ReceiptIds { get; } = new(StringComparer.Ordinal);
         public string? Text { get; set; }
+        public bool MessageIncomplete { get; set; }
     }
     private sealed class Transcript
     {
         public Transcript(ReceiptContext context) => Context = context;
         public ReceiptContext Context { get; }
+        public Dialogue? Original { get; init; }
         public int Index { get; set; } = -1;
         public string? Page { get; set; }
         public string[] Remaining { get; set; } = Array.Empty<string>();

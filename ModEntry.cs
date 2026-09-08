@@ -51,7 +51,7 @@ internal sealed class ModEntry : Mod
     {
         if (!Context.IsPlayerFree)
             return;
-        Game1.activeClickableMenu = new KeepsakeMenu(Helper.Translation, journal, FormatNote, SenderName);
+        Game1.activeClickableMenu = new KeepsakeMenu(Helper.Translation, journal, FormatNote, SenderName, Config, () => Helper.WriteConfig(Config));
         Game1.playSound("bigSelect");
     }
 
@@ -64,7 +64,7 @@ internal sealed class ModEntry : Mod
 
     private string FormatNote(GiftEntry entry)
     {
-        string sender = Helper.Translation.Get("note.sender", new { name = SenderName(entry.SenderId) });
+        string sender = Helper.Translation.Get("note.sender", new { name = Game1.getCharacterFromName(entry.SenderId, false)?.displayName ?? entry.SenderDisplayName ?? SenderName(entry.SenderId) });
         string date = Helper.Translation.Get("note.date", new
         {
             season = Helper.Translation.Get("season." + entry.Season).ToString(), day = entry.Day, year = entry.Year
@@ -72,7 +72,7 @@ internal sealed class ModEntry : Mod
         string source = Helper.Translation.Get("note.source." + entry.Origin);
         if (entry.SourceModId is not null)
         {
-            string modName = Helper.ModRegistry.Get(entry.SourceModId)?.Manifest.Name ?? entry.SourceModId;
+            string modName = Helper.ModRegistry.Get(entry.SourceModId)?.Manifest.Name ?? entry.SourceDisplayName ?? entry.SourceModId;
             source += "\n" + Helper.Translation.Get("note.provider", new { name = modName });
         }
         return sender + "\n" + date + "\n" + source;

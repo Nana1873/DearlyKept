@@ -40,6 +40,15 @@ internal sealed class GiftLedger
         Revision++;
     }
 
+    public bool MarkMessageIncomplete(string id)
+    {
+        int index = entries.FindIndex(e => e.Id == id);
+        if (index < 0 || entries[index].MessageIncomplete) return false;
+        entries[index] = entries[index] with { MessageIncomplete = true };
+        Revision++;
+        return true;
+    }
+
     public int Load(JournalData data)
     {
         if (data.SchemaVersion != 1 || data.Gifts is null)

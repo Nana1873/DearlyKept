@@ -226,3 +226,25 @@ Check("loading an empty save never leaks the previous save's history",
     recovered.Load(new JournalData()) == 0 && recovered.Entries.Count == 0);
 
 Console.WriteLine($"All {passed} checks passed. Durable roundtrip evidence: {savePath}");
+
+// Archive controls and growth regressions use synthetic history, never game saves.
+Check("search finds saved text independent of case", ArchiveSearch.Matches("BIRTHDAY", "Cookies", "Evelyn", "Happy birthday, farmer!"));
+Check("search tolerates missing provider fields", !ArchiveSearch.Matches("Penny", null, "Leah", null));
+Check("empty search includes every receipt", ArchiveSearch.Matches("", null));
+Check("Unicode sender search is case insensitive", ArchiveSearch.Matches("RENÉE", "Renée"));
+var retainedNames = mail with { SenderDisplayName = "A removed friend", SourceDisplayName = "An uninstalled mod", MessageIncomplete = true };
+var namedLedger = new GiftLedger();
+namedLedger.Add(retainedNames);
+var restoredNames = JsonSerializer.Deserialize<JournalData>(JsonSerializer.Serialize(namedLedger.Snapshot()))!;
+Check("removed-content names and incomplete-message status survive roundtrip", restoredNames.Gifts.Single() == retainedNames);
+Check("oversized mail is explicitly recognized before normalization", GiftMessage.Normalize(new string('x', GiftMessage.MaximumLength + 1)) is null);
+Check("incomplete message marker does not create a new receipt", namedLedger.MarkMessageIncomplete("missing") == false && namedLedger.Entries.Count == 1);
+var sizeWatch = System.Diagnostics.Stopwatch.StartNew();
+var large = new GiftLedger();
+for (int i = 0; i < 10000; i++) large.Add(mail with { Id = Guid.NewGuid().ToString("N"), Year = i / 1000 + 1, MessageText = "A personal letter to keep. " + i });
+string largeJson = JsonSerializer.Serialize(large.Snapshot());
+var largeReloaded = new GiftLedger();
+Check("10000 chronological receipts roundtrip without loss", largeReloaded.Load(JsonSerializer.Deserialize<JournalData>(largeJson)!) == 0 && largeReloaded.Entries.SequenceEqual(large.Entries));
+Check("large-archive search returns the exact suffix", largeReloaded.Entries.Count(e => ArchiveSearch.Matches("keep. 9999", e.MessageText)) == 1);
+Console.WriteLine($"Large fixture: 10000 entries, {System.Text.Encoding.UTF8.GetByteCount(largeJson)} bytes, create/serialize/load/search {sizeWatch.ElapsedMilliseconds} ms.");
+Console.WriteLine($"Final total: {passed} checks passed.");

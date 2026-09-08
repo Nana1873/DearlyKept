@@ -14,7 +14,10 @@ public sealed record GiftEntry(
     string ItemName,
     int Quantity,
     int Quality,
-    string? MessageText = null)
+    string? MessageText = null,
+    bool MessageIncomplete = false,
+    string? SenderDisplayName = null,
+    string? SourceDisplayName = null)
 {
     public bool IsValid() => Guid.TryParseExact(Id, "N", out _)
         && Text(SenderId, 128) && Text(SourceId, 512)
@@ -24,7 +27,9 @@ public sealed record GiftEntry(
         && Season is "spring" or "summer" or "fall" or "winter"
         && Text(QualifiedItemId, 256) && Text(ItemName, 512)
         && Quantity > 0 && Quality >= 0
-        && (MessageText is null || MessageText.Length <= 16000);
+        && (MessageText is null || MessageText.Length <= 16000)
+        && (SenderDisplayName is null || Text(SenderDisplayName, 512))
+        && (SourceDisplayName is null || Text(SourceDisplayName, 512));
 
     private static bool Text(string? value, int limit) => !string.IsNullOrWhiteSpace(value) && value.Length <= limit;
 }

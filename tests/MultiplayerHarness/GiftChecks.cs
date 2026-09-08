@@ -3,6 +3,7 @@ using System.Text.Json;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
+using StardewValley.Locations;
 
 namespace DearlyKept.MultiplayerHarness;
 
@@ -26,12 +27,15 @@ internal sealed partial class ModEntry
     private static object? Invoke(object target, string name, params object[] args) => target.GetType()
         .GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, args.Select(a => a.GetType()).ToArray(), null)!.Invoke(target, args);
     private static Dictionary<string, int> Quantities() => Game1.player.Items.Where(i => i is not null)
+        .Concat((Utility.getHomeOfFarmer(Game1.player) as FarmHouse)?.fridge.Value?.Items.Where(i => i is not null) ?? Enumerable.Empty<Item>())
         .GroupBy(i => i.QualifiedItemId).ToDictionary(g => g.Key, g => g.Sum(i => i.Stack));
 
     // The command dispatcher has verified the exact owned network fixture.
     private void StartGift(string kind)
     {
         NoMenu();
+        bool calendar = kind.StartsWith("calendar-");
+        if (calendar) kind = kind[9..];
         giftProvider = kind switch
         {
             "birthday" or "reward" => "TitanmasterRy.MarriageOverhaul",
@@ -42,10 +46,31 @@ internal sealed partial class ModEntry
         object mod = ModInstance(giftProvider);
         giftSender = kind == "happy-birthday" ? (Context.IsMainPlayer ? "Evelyn" : "Gus") : (Context.IsMainPlayer ? "Leah" : "Penny");
         NPC npc = Game1.getCharacterFromName(giftSender);
+        if (calendar)
+        {
+            Game1.year = 2; // Set the local clock on both peers before constructing a past wedding date.
+            int weddingDay = Game1.Date.TotalDays - (kind == "anniversary" ? 111 : 20);
+            Check(weddingDay >= 0, "calendar fixture wedding date is representable before updating friendship data");
+            Game1.player.HouseUpgradeLevel = 1;
+            ((FarmHouse)Utility.getHomeOfFarmer(Game1.player)).setMapForUpgradeLevel(1);
+            Game1.player.spouse = giftSender;
+            Game1.player.friendshipData[giftSender] = new Friendship(3000)
+            {
+                Status = FriendshipStatus.Married,
+                WeddingDate = new WorldDate(Game1.Date) { TotalDays = weddingDay }
+            };
+        }
         giftOrigin = kind == "reward" ? "spouse" : kind == "anniversary" ? "anniversary" : "birthday";
         giftBefore = Journal; giftItems = Quantities(); giftPages.Clear(); giftPageKey = null;
         if (kind == "anniversary")
         {
+            if (calendar)
+            {
+                object marriage = ModInstance("TitanmasterRy.MarriageOverhaul");
+                Property(marriage.GetType().GetProperty("Config")!.GetValue(marriage)!, "EnableMilestones", false);
+                Monitor.Log("DKNET calendar anniversary prepared with Marriage Overhaul milestones disabled to prevent its separate speech replacing Wedding Anniversaries; sleep normally, then gift-talk.", LogLevel.Info);
+                return;
+            }
             Invoke(mod, "PushAnniversaryText", npc, 12);
             Game1.drawDialogue(npc);
         }
@@ -65,11 +90,11 @@ internal sealed partial class ModEntry
             if (kind == "birthday")
             {
                 Property(config, "EnableBirthdaySystem", true);
-                Property(config, "PlayerBirthdayDay", Game1.dayOfMonth);
+                Property(config, "PlayerBirthdayDay", Game1.dayOfMonth + (calendar ? 1 : 0));
                 Property(config, "PlayerBirthdaySeason", Game1.currentSeason);
                 Property(config, "BirthdayGiftChance", 0f);
                 Property(data, "LastBirthdayYearProcessed", -1);
-                Invoke(mod, "Birthday_OnDayStarted", npc);
+                if (!calendar) Invoke(mod, "Birthday_OnDayStarted", npc);
             }
             else
             {

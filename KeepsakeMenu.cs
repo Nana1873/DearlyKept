@@ -11,9 +11,9 @@ using StardewValley.Menus;
 namespace DearlyKept;
 
 /// <summary>Browse this farmer's saved gift memories without changing any inventory items.</summary>
-internal sealed class KeepsakeMenu : IClickableMenu
+internal sealed partial class KeepsakeMenu : IClickableMenu
 {
-    private const int RowHeight = 82;
+    private const int RowHeight = 92;
     private static readonly Color MutedText = new(114, 91, 74);
     private static readonly Color Highlight = new(255, 237, 190);
     private readonly ITranslationHelper i18n;
@@ -49,20 +49,24 @@ internal sealed class KeepsakeMenu : IClickableMenu
     private string hoverText = "";
     private int displayedRevision = int.MinValue;
 
-    public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName)
+    public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName, ModConfig? config = null, Action? saveConfig = null)
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
         this.i18n = i18n;
         this.journal = journal;
         this.formatNote = formatNote;
         this.senderName = senderName;
+        settings = config;
+        persistSettings = saveConfig;
+        searchBox = new TextBox(Game1.content.Load<Texture2D>("LooseSprites\\textBox"), null, Game1.smallFont, Game1.textColor) { Text = "", textLimit = 160 };
+        exitFunction += () => { searchBox.Selected = false; };
         Layout();
         RefreshEntries();
     }
 
     private void Layout()
     {
-        compactLayout = Game1.uiViewport.Height < 600;
+        compactLayout = Game1.uiViewport.Height < 600 || Game1.uiViewport.Width < 900;
         int margin = compactLayout ? 48 : 80;
         width = Math.Min(1040, Game1.uiViewport.Width - margin);
         height = Math.Min(704, Game1.uiViewport.Height - margin);
@@ -71,7 +75,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
         int columnWidth = (width - 88) * 45 / 100;
         rowHeight = RowHeight;
-        int contentTop = yPositionOnScreen + (compactLayout ? 160 : 190);
+        int contentTop = yPositionOnScreen + (compactLayout ? 216 : 234);
         int actionTop = yPositionOnScreen + height - (compactLayout ? 88 : 116);
         visibleRows = Math.Max(1, (actionTop - contentTop) / rowHeight);
         listBounds = new Rectangle(xPositionOnScreen + 32, contentTop, columnWidth, visibleRows * rowHeight);
@@ -79,9 +83,15 @@ internal sealed class KeepsakeMenu : IClickableMenu
         readBounds = new Rectangle(detailBounds.X, actionTop, detailBounds.Width, 48);
         previousBounds = new Rectangle(listBounds.X, actionTop, 48, 48);
         nextBounds = new Rectangle(listBounds.Right - 48, previousBounds.Y, 48, previousBounds.Height);
-        int filterWidth = (width - 88) / 2;
+        int filterWidth = (width - 100) / 4;
         originBounds = new Rectangle(listBounds.X, yPositionOnScreen + (compactLayout ? 106 : 120), filterWidth, 44);
-        senderBounds = new Rectangle(originBounds.Right + 24, originBounds.Y, filterWidth, 44);
+        senderBounds = new Rectangle(originBounds.Right + 12, originBounds.Y, filterWidth, 44);
+        yearBounds = new Rectangle(senderBounds.Right + 12, originBounds.Y, filterWidth, 44);
+        seasonBounds = new Rectangle(yearBounds.Right + 12, originBounds.Y, filterWidth, 44);
+        searchBox.X = listBounds.X;
+        searchBox.Y = originBounds.Bottom + 10;
+        searchBox.Width = width - 286;
+        settingsBounds = new Rectangle(searchBox.X + searchBox.Width + 14, searchBox.Y, 208, 44);
         messageBounds = new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 146 : 164), width - 64,
             actionTop - yPositionOnScreen - (compactLayout ? 162 : 180));
         messagePreviousBounds = new Rectangle(messageBounds.X, actionTop, 48, 48);
@@ -133,7 +143,10 @@ internal sealed class KeepsakeMenu : IClickableMenu
         int previousIndex = selectedIndex;
         entries.Clear();
         entries.AddRange(allEntries.Where(entry => (originFilter.Length == 0 || entry.Entry.Origin == originFilter)
-            && (senderFilter.Length == 0 || entry.Entry.SenderId == senderFilter)));
+            && (senderFilter.Length == 0 || entry.Entry.SenderId == senderFilter)
+            && (yearFilter == 0 || entry.Entry.Year == yearFilter)
+            && (seasonFilter.Length == 0 || entry.Entry.Season == seasonFilter)
+            && MatchesSearch(entry)));
         selectedIndex = selectedId == null ? -1 : entries.FindIndex(entry => entry.Entry.Id == selectedId);
         if (selectedIndex < 0 && entries.Count > 0)
             selectedIndex = Math.Clamp(previousIndex, 0, entries.Count - 1);
@@ -174,15 +187,15 @@ internal sealed class KeepsakeMenu : IClickableMenu
     {
         string value = focus == FilterFocus.Occasion ? originFilter : senderFilter;
         string label = value.Length == 0 ? i18n.Get("menu.filter.all").ToString()
-            : focus == FilterFocus.Occasion ? OccasionName(value) : senderName(value);
+            : focus == FilterFocus.Occasion ? OccasionName(value) : SenderChoiceLabel(value);
         return i18n.Get(focus == FilterFocus.Occasion ? "menu.filter.occasion" : "menu.filter.sender", new { value = label }).ToString();
     }
 
     private string OccasionAndSource(GiftEntry entry)
     {
         string occasion = OccasionName(entry.Origin);
-        return entry.SourceModId == "Omegasis.HappyBirthday"
-            ? i18n.Get("menu.occasion-source", new { occasion, source = "Happy Birthday" }).ToString()
+        return SourceName(entry) is { } source
+            ? i18n.Get("menu.occasion-source", new { occasion, source }).ToString()
             : occasion;
     }
 
@@ -191,13 +204,12 @@ internal sealed class KeepsakeMenu : IClickableMenu
         try
         {
             // This is a separate display item. It is never added to a player's inventory.
-            Item? preview = ItemRegistry.Create(entry.QualifiedItemId, 1, entry.Quality, allowNull: true);
-            return new KeepsakeEntry(entry, preview, preview?.DisplayName ?? entry.ItemName);
+            return new KeepsakeEntry(entry, ItemRegistry.GetData(entry.QualifiedItemId)?.DisplayName ?? entry.ItemName);
         }
         catch (Exception)
         {
             // A saved memory remains readable after the mod that supplied its item is removed.
-            return new KeepsakeEntry(entry, null, entry.ItemName);
+            return new KeepsakeEntry(entry, entry.ItemName);
         }
     }
 
@@ -282,6 +294,8 @@ internal sealed class KeepsakeMenu : IClickableMenu
         string text = string.IsNullOrWhiteSpace(storedText)
             ? i18n.Get("menu.message-missing").ToString()
             : storedText;
+        if (messageEntry.Entry.MessageIncomplete)
+            text = i18n.Get("menu.message-incomplete") + (string.IsNullOrWhiteSpace(storedText) ? "" : "\n\n" + storedText);
         int textWidth = Math.Max(1, messageBounds.Width - 40);
         int linesPerPage = Math.Max(1, (messageBounds.Height - 32) / Game1.smallFont.LineSpacing);
         List<string> lines = new();
@@ -316,6 +330,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void update(GameTime time)
     {
         base.update(time);
+        UpdateControls(time);
         RefreshEntries();
     }
 
@@ -328,6 +343,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
         RefreshEntries();
+        if (HandleControlClick(x, y)) return;
         if (upperRightCloseButton?.containsPoint(x, y) == true)
         {
             exitThisMenu();
@@ -345,12 +361,12 @@ internal sealed class KeepsakeMenu : IClickableMenu
         }
         if (originBounds.Contains(x, y))
         {
-            CycleFilter(FilterFocus.Occasion, 1);
+            OpenPicker(FilterFocus.Occasion);
             return;
         }
         if (senderBounds.Contains(x, y))
         {
-            CycleFilter(FilterFocus.Sender, 1);
+            OpenPicker(FilterFocus.Sender);
             return;
         }
         for (int row = 0; row < visibleRows && firstVisibleIndex + row < entries.Count; row++)
@@ -371,6 +387,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     public override void receiveRightClick(int x, int y, bool playSound = true)
     {
+        if (picker != null) { picker = null; captureBinding = false; return; }
         if (messageEntry != null)
             CloseMessage();
         else if (originBounds.Contains(x, y))
@@ -381,6 +398,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
 
     public override void receiveScrollWheelAction(int direction)
     {
+        if (picker != null) { MovePicker(direction > 0 ? -1 : 1); return; }
         if (messageEntry != null)
             ChangeMessagePage(direction > 0 ? -1 : 1);
         else
@@ -401,6 +419,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
         bool up = key == Keys.Up || Game1.options.moveUpButton.Any(button => button.key == key);
         bool down = key == Keys.Down || Game1.options.moveDownButton.Any(button => button.key == key);
         bool previousChoice = Game1.options.useToolButton.Any(button => button.key == key);
+        if (HandleControlKey(key, cancel, activate, up, down)) return;
 
         if (messageEntry != null)
         {
@@ -434,10 +453,11 @@ internal sealed class KeepsakeMenu : IClickableMenu
         }
         if (left || right)
         {
-            filterFocus = right ? FilterFocus.Sender : FilterFocus.Occasion;
+            int nextFocus = filterFocus == FilterFocus.None ? (right ? 2 : 1) : (int)filterFocus + (right ? 1 : -1);
+            filterFocus = (FilterFocus)(nextFocus < 1 ? 6 : nextFocus > 6 ? 1 : nextFocus);
             return;
         }
-        if (previousChoice && filterFocus != FilterFocus.None)
+        if (previousChoice && filterFocus is FilterFocus.Occasion or FilterFocus.Sender)
         {
             CycleFilter(filterFocus, -1);
             return;
@@ -447,7 +467,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             if (filterFocus == FilterFocus.None)
                 OpenMessage();
             else
-                CycleFilter(filterFocus, 1);
+                ActivateFocusedControl();
             return;
         }
 
@@ -466,7 +486,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
                 Select(entries.Count - 1);
                 break;
             case Keys.Tab:
-                filterFocus = (FilterFocus)(((int)filterFocus + 1) % 3);
+                filterFocus = (FilterFocus)(((int)filterFocus + 1) % 7);
                 break;
             default:
                 base.receiveKeyPress(key);
@@ -500,6 +520,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
     {
         hoverText = "";
         upperRightCloseButton?.tryHover(x, y);
+        if (picker != null) return;
         if (messageEntry != null)
             return;
         if (originBounds.Contains(x, y) || senderBounds.Contains(x, y))
@@ -530,6 +551,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             DrawMessage(b);
         else
             DrawArchive(b);
+        if (picker != null) DrawPicker(b);
         upperRightCloseButton?.draw(b);
         if (hoverText.Length > 0 && messageEntry is null)
             drawHoverText(b, hoverText, Game1.smallFont);
@@ -539,12 +561,14 @@ internal sealed class KeepsakeMenu : IClickableMenu
     private void DrawArchive(SpriteBatch b)
     {
         b.DrawString(Game1.dialogueFont, i18n.Get("menu.title").ToString(), new Vector2(xPositionOnScreen + 36, yPositionOnScreen + (compactLayout ? 18 : 28)), Game1.textColor);
-        string collection = i18n.Get(originFilter.Length > 0 || senderFilter.Length > 0 ? "menu.collection-filtered" : "menu.collection",
+        string collection = i18n.Get(originFilter.Length > 0 || senderFilter.Length > 0 || yearFilter != 0 || seasonFilter.Length > 0 || searchTerm.Length > 0 ? "menu.collection-filtered" : "menu.collection",
             new { count = entries.Count, total = allEntries.Count }).ToString();
+        if (journal.StatusKey is { } status) collection = i18n.Get(status).ToString();
         b.DrawString(Game1.smallFont, FitText(collection, Game1.smallFont, width - 76), new Vector2(xPositionOnScreen + 38, yPositionOnScreen + (compactLayout ? 62 : 75)), MutedText);
         DrawRule(b, new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 94 : 108), width - 64, 2));
         DrawButton(b, originBounds, FilterLabel(FilterFocus.Occasion), filterFocus == FilterFocus.Occasion, originChoices.Count > 1);
         DrawButton(b, senderBounds, FilterLabel(FilterFocus.Sender), filterFocus == FilterFocus.Sender, senderChoices.Count > 1);
+        DrawControls(b);
 
         if (entries.Count == 0)
             DrawEmptyState(b);
@@ -581,7 +605,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
             float textX = bounds.X + (compactLayout ? 70 : 82);
             float availableWidth = bounds.Right - textX - 16;
             b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 9 : 13)), Game1.textColor);
-            b.DrawString(Game1.smallFont, FitText(senderName(entry.Entry.SenderId), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + (compactLayout ? 34 : 42)), MutedText);
+            b.DrawString(Game1.smallFont, FitText(SenderLabel(entry.Entry), Game1.smallFont, availableWidth), new Vector2(textX, bounds.Y + 42), MutedText);
         }
     }
 
@@ -590,11 +614,25 @@ internal sealed class KeepsakeMenu : IClickableMenu
         if (SelectedEntry is not { } entry)
             return;
         DrawBox(b, detailBounds);
+        if (compactLayout)
+        {
+            // The selected row already contains the item and sender. Reserve the
+            // small detail panel for the date and producer instead of repeating it.
+            string[] metadata = { DateText(entry.Entry), OccasionName(entry.Entry.Origin), SourceName(entry.Entry) ?? "" };
+            for (int line = 0; line < metadata.Length; line++)
+            {
+                int y = detailBounds.Y + 10 + line * 30;
+                if (y + Game1.smallFont.LineSpacing > detailBounds.Bottom - 4) break;
+                b.DrawString(Game1.smallFont, FitText(metadata[line], Game1.smallFont, detailBounds.Width - 40),
+                    new Vector2(detailBounds.X + 20, y), MutedText);
+            }
+            return;
+        }
         DrawPreview(b, entry, new Vector2(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 12 : 18)), compactLayout ? 0.75f : 1f);
         int textX = detailBounds.X + (compactLayout ? 82 : 100);
         int textWidth = detailBounds.Right - textX - 20;
         b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 12 : 25)), Game1.textColor);
-        string from = i18n.Get("menu.from", new { sender = senderName(entry.Entry.SenderId) }).ToString();
+        string from = i18n.Get("menu.from", new { sender = SenderLabel(entry.Entry) }).ToString();
         b.DrawString(Game1.smallFont, FitText(from, Game1.smallFont, textWidth), new Vector2(textX, detailBounds.Y + (compactLayout ? 43 : 56)), MutedText);
         DrawRule(b, new Rectangle(detailBounds.X + 20, detailBounds.Y + (compactLayout ? 81 : 101), detailBounds.Width - 40, 2));
 
@@ -607,13 +645,14 @@ internal sealed class KeepsakeMenu : IClickableMenu
         }
 
         int noteWidth = detailBounds.Right - noteX - 24;
+        if (noteY + 32 > detailBounds.Bottom - 12) return;
         string date = FitText(DateText(entry.Entry), Game1.smallFont, noteWidth);
         b.DrawString(Game1.smallFont, date, new Vector2(noteX, noteY), MutedText);
         string occasion = compactLayout ? OccasionAndSource(entry.Entry) : OccasionName(entry.Entry.Origin);
         b.DrawString(Game1.smallFont, FitText(occasion, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 32), MutedText);
-        if (!compactLayout && entry.Entry.SourceModId == "Omegasis.HappyBirthday")
+        if (!compactLayout && SourceName(entry.Entry) is { } providerName && noteY + 92 < detailBounds.Bottom)
         {
-            string provider = i18n.Get("note.provider", new { name = "Happy Birthday" }).ToString();
+            string provider = i18n.Get("note.provider", new { name = providerName }).ToString();
             b.DrawString(Game1.smallFont, FitText(provider, Game1.smallFont, noteWidth), new Vector2(noteX, noteY + 64), MutedText);
         }
     }
@@ -629,9 +668,9 @@ internal sealed class KeepsakeMenu : IClickableMenu
     private void DrawEmptyState(SpriteBatch b)
     {
         Rectangle titleBounds = new(xPositionOnScreen + 48, listBounds.Y + (compactLayout ? 6 : 46), width - 96, 50);
-        DrawCentered(b, i18n.Get("menu.empty-title").ToString(), Game1.dialogueFont, titleBounds, Game1.textColor);
+        DrawCentered(b, i18n.Get(allEntries.Count > 0 ? "menu.no-results" : "menu.empty-title").ToString(), Game1.dialogueFont, titleBounds, Game1.textColor);
         int textWidth = Math.Min(620, width - 128);
-        string text = Game1.parseText(i18n.Get("menu.empty-body").ToString(), Game1.smallFont, textWidth);
+        string text = Game1.parseText(i18n.Get(allEntries.Count > 0 ? "menu.no-results-help" : "menu.empty-body").ToString(), Game1.smallFont, textWidth);
         Vector2 size = Game1.smallFont.MeasureString(text);
         b.DrawString(Game1.smallFont, text, new Vector2(xPositionOnScreen + (width - size.X) / 2, titleBounds.Bottom + 8), MutedText);
     }
@@ -640,7 +679,7 @@ internal sealed class KeepsakeMenu : IClickableMenu
     {
         if (messageEntry is not { } entry)
             return;
-        string title = i18n.Get("menu.message-title", new { sender = senderName(entry.Entry.SenderId) }).ToString();
+        string title = i18n.Get("menu.message-title", new { sender = SenderLabel(entry.Entry) }).ToString();
         b.DrawString(Game1.dialogueFont, FitText(title, Game1.dialogueFont, width - 76),
             new Vector2(xPositionOnScreen + 36, yPositionOnScreen + (compactLayout ? 18 : 28)), Game1.textColor);
         b.DrawString(Game1.smallFont, FitText(ItemText(entry), Game1.smallFont, width - 76),
@@ -693,7 +732,27 @@ internal sealed class KeepsakeMenu : IClickableMenu
         return text[..length].TrimEnd() + ellipsis;
     }
 
-    private sealed record KeepsakeEntry(GiftEntry Entry, Item? Preview, string DisplayName);
+    private sealed class KeepsakeEntry
+    {
+        public GiftEntry Entry { get; }
+        public string DisplayName { get; }
+        private Item? preview;
+        private bool attempted;
+        public Item? Preview
+        {
+            get
+            {
+                if (!attempted)
+                {
+                    attempted = true;
+                    try { preview = ItemRegistry.Create(Entry.QualifiedItemId, 1, Entry.Quality, allowNull: true); }
+                    catch { preview = null; }
+                }
+                return preview;
+            }
+        }
+        public KeepsakeEntry(GiftEntry entry, string displayName) { Entry = entry; DisplayName = displayName; }
+    }
 
-    private enum FilterFocus { None, Occasion, Sender }
+    private enum FilterFocus { None, Occasion, Sender, Year, Season, Search, Settings }
 }

@@ -94,10 +94,14 @@ format is provided for authors and has not been tested against third-party packs
 
 ## Data and read-only API
 
-The journal is stored per save through SMAPI's save-data API under this mod's
-`gift-journal` key. Schema version 1 contains a `Gifts` list of receipt snapshots.
-The regular `Saving` event persists the archive; an unsaved session does not
-persist its new memories or message updates. The archive UI is read-only.
+The journal is stored on the receiving farmer in
+`Farmer.modData["Nana1873.DearlyKept/GiftJournal"]`. Schema version 1 contains
+a `Gifts` list of receipt snapshots. Native multiplayer synchronization carries
+that data to the host, including the farmhand's history before disconnecting.
+The regular game save persists it to disk; an unsaved session does not persist
+its new memories or message updates. The archive UI is read-only. Only the host's
+local player can import a pre-0.4 SMAPI `gift-journal` save-data archive, and only
+when no player-owned archive exists.
 
 Each entry contains:
 
@@ -112,12 +116,15 @@ Each entry contains:
 | `QualifiedItemId`, `ItemName` | Item identity and a saved name for missing-item fallback. |
 | `Quantity`, `Quality` | The received amount and item quality before stack merging. |
 | `MessageText` | Optional actual letter text or observed gift dialogue; `null` when unavailable. |
+| `MessageIncomplete` | Optional flag for text exceeding the capture limit; defaults to `false` in older entries. |
+| `SenderDisplayName`, `SourceDisplayName` | Optional receipt-time display names used when original content is unavailable. |
 
 `MessageText` is an optional, backward-compatible addition to schema 1. Older
 entries retain their data and show a translated missing-text placeholder.
 Messages are limited to 16,000 characters: an unusually long letter keeps its
 gift entry with no body, while a birthday transcript keeps complete displayed
-pages that fit the limit. The reader wraps and paginates stored text without
+pages that fit the limit. New captures set `MessageIncomplete` in either case
+and the reader explains the limitation. The reader wraps and paginates stored text without
 requiring the original letter or inventory item to remain available.
 
 The menu creates separate preview items and never moves inventory items. A
@@ -139,8 +146,8 @@ public interface IDearlyKeptApi
 `GetGiftCount()` returns the number of entries in the loaded journal.
 `GetGiftsJson()` returns a JSON array of its entries in stored chronological
 order; the menu displays them newest first. The returned entries include optional
-`MessageText`. This API provides read-only snapshots of the current single-player
-save's archive.
+`MessageText`. This API provides read-only snapshots of the current local player's
+loaded archive. It does not enumerate other players' journals.
 
 Version 0.1 was an internal item-note prototype. Its legacy item tags are neither
 imported nor modified. They are not a reliable receipt history and do not become

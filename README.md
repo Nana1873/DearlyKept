@@ -16,7 +16,9 @@ The tested runtime and current acceptance scope are recorded in
 - Leaves item stacking and inventory space unchanged.
 - Opens a standalone menu with item previews, sender names, available portraits,
   quantities, dates, and occasions. Newest entries appear first.
-- Filters memories by occasion and sender, offering only choices with entries.
+- Select memories by occasion, sender, year and season, or search items, senders
+  and saved message text. Filters can be combined.
+- Change capture options and the journal hotkey through its Settings button.
 - Keeps the actual gift letter or displayed gift dialogue for later reading
   in a separate, paginated message view.
 - Keeps a separate journal for each player in each save, persisted during the game's regular save.
@@ -25,6 +27,12 @@ The tested runtime and current acceptance scope are recorded in
 
 Saved messages keep the language and personalized wording shown when received,
 even if you later change the game's language.
+Unavailable custom characters and items retain their recorded names. Messages
+which exceed the 16,000-character storage limit show an explicit notice in the
+reader. An archive which cannot safely load shows a recording-paused notice.
+
+The current 0.5 candidate and its remaining acceptance gates are tracked in
+[the readiness checklist](docs/readiness-0.5.md).
 
 ## Install and use
 
@@ -76,7 +84,9 @@ gifts are not reconstructed.
 
 ## Settings
 
-After the first launch, edit `config.json` while the game is closed:
+Use the journal's **Settings** button (F2), or edit `config.json` while the game
+is closed after its first launch. The in-game rebind accepts one key; the file
+also accepts SMAPI key combinations.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
@@ -98,11 +108,14 @@ the game synchronizes its storage with the host. Native mail, disconnect/rejoin,
 and saving/restarting were tested with two local network processes. The supported
 Happy Birthday, Marriage Overhaul and Wedding Anniversaries deliveries were also
 tested on both peers, including separate texts and inventories. These checks do
-not establish every producer's multiplayer calendar or quest behavior.
+not establish every producer's multiplayer calendar or quest behavior. Selected
+natural birthdays, anniversaries and complete delayed requests passed in the
+0.5 fixture. Host-only and farmhand-only installation still lack live acceptance;
+the installed SDVKit release stages identical mod sets on both peers.
 Splitscreen state is isolated in code, but live
 acceptance is pending because SDVKit 0.9.0 rejects that test topology.
 
-Version 0.4.0 does not add item tags, patch stacking, or alter normal inventory
+Dearly Kept does not add item tags, patch stacking, or alter normal inventory
 tooltips. It snapshots gifts at supported delivery points and stores the journal
 in the receiving farmer's save data. The host automatically imports a pre-0.4
 save-level archive when no player archive exists; farmhands never import it.

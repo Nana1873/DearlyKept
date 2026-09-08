@@ -8,5 +8,7 @@
   <ItemGroup>
     <Compile Include="../../GiftEntry.cs" Link="GiftEntry.cs" />
     <Compile Include="../../GiftLedger.cs" Link="GiftLedger.cs" />
+    <Compile Include="../../ArchiveSearch.cs" Link="ArchiveSearch.cs" />
+    <Compile Include="../../GiftMessage.cs" Link="GiftMessage.cs" />
   </ItemGroup>
 </Project>

@@ -16,7 +16,7 @@ internal sealed partial class ModEntry
     private const string BirthdayGreetingKey = "Omegasis.HappyBirthday.BirthdayGreeting";
     private const string MultipageBirthdayGreeting = "Happy birthday, @! This first page is an explicitly authored QA greeting."
         + "#$b#On this second page, @, the Cookie comes with a complete two-page memory. $h";
-    private static readonly string[] BirthdayNpcs = { "Evelyn", "Gus", "Robin" };
+    private static readonly string[] BirthdayNpcs = { "Evelyn", "Gus", "Robin", "Leah" };
     private string? birthdayFixtureId;
     private bool birthdayMultipage;
     private BirthdayAttempt? birthdayAttempt;
