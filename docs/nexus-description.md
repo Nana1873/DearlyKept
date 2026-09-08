@@ -1,7 +1,7 @@
 # Dearly Kept — A Lasting Gift Journal
 
-Unreleased 0.2.0 description draft. Check the candidate's validation report before
-uploading; the current text-capture and archive UI acceptance is still pending.
+Unreleased 0.2.0 description draft. See the validation report for the accepted
+artifact, actual gameplay checks, and source-built Happy Birthday test scope.
 
 **Those cookies came from Mom. Now you can keep that little memory.**
 
@@ -83,9 +83,9 @@ Stardew Valley.
 - Lead screenshot: the journal with Mom and Evelyn entries.
 - Second screenshot: the message reader showing an actual recorded letter.
 - Optional third screenshot: the German archive with an active filter.
-- Complete 0.2.0 journal acceptance and refresh the screenshots before uploading;
-  the old item-tooltip screenshots describe the internal prototype.
+- Use the accepted 0.2.0 archive screenshots and its exact tested ZIP; the old
+  item-tooltip screenshots describe the internal prototype.
 - Add the actual repository and Nexus update IDs only once those pages exist.
-- Recheck novelty for the journal design. Research for the former item-note
-  prototype does not establish uniqueness for this version. Avoid advertising
-  a provable "world first" or promising any download count.
+- The September 8 journal research found adjacent letter/dialogue archives;
+  those features alone are not novel. Avoid advertising a provable "world first"
+  or promising any download count.

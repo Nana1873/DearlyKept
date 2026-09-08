@@ -23,6 +23,9 @@ The tested runtime and current acceptance scope are recorded in
 - Supports keyboard, mouse, and controller navigation, with English and German
   text. Other languages fall back to English.
 
+Saved messages keep the language and personalized wording shown when received,
+even if you later change the game's language.
+
 ## Install and use
 
 Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**.

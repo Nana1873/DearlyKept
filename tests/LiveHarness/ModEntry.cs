@@ -10,6 +10,9 @@ internal sealed partial class ModEntry : Mod
 {
     private const string GiftKey = "Nana1873.DearlyKept/Provenance";
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
+    private Options? controllerOptions;
+    private Options.GamepadModes previousControllerMode;
+    private bool previousControllerControls;
 
     public override void Entry(IModHelper helper)
     {
@@ -20,6 +23,7 @@ internal sealed partial class ModEntry : Mod
         helper.Events.GameLoop.UpdateTicked += ObserveBirthdayDelivery;
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearBirthdayFixtureCache();
         helper.Events.GameLoop.ReturnedToTitle += (_, _) => ClearArchiveFixtureCache();
+        helper.Events.GameLoop.ReturnedToTitle += (_, _) => RestoreController();
     }
 
     private void Run(string command, string[] args)
@@ -30,6 +34,25 @@ internal sealed partial class ModEntry : Mod
             string action = args.FirstOrDefault()?.ToLowerInvariant() ?? "status";
             switch (action)
             {
+                case "controller":
+                    RequireNoMenu();
+                    if (args.ElementAtOrDefault(1) == "on")
+                    {
+                        if (controllerOptions is null)
+                        {
+                            controllerOptions = Game1.options;
+                            previousControllerMode = controllerOptions.gamepadMode;
+                            previousControllerControls = controllerOptions.gamepadControls;
+                        }
+                        controllerOptions.gamepadMode = Options.GamepadModes.ForceOn;
+                        controllerOptions.gamepadControls = true;
+                        Monitor.Log("DKQA controller fixture uses ForceOn to avoid synthetic disconnect pauses in Auto mode. Restore before saving or stopping.", LogLevel.Info);
+                    }
+                    else if (args.ElementAtOrDefault(1) == "restore")
+                        RestoreController();
+                    else
+                        throw new InvalidOperationException("Usage: dkqa controller on|restore.");
+                    break;
                 case "birthday":
                     RunBirthdayCommand(args, owned);
                     break;
@@ -161,6 +184,16 @@ internal sealed partial class ModEntry : Mod
         {
             Monitor.Log($"DKQA REJECT/FAIL: {ex.Message}", LogLevel.Error);
         }
+    }
+
+    private void RestoreController()
+    {
+        if (controllerOptions is null)
+            return;
+        controllerOptions.gamepadMode = previousControllerMode;
+        controllerOptions.gamepadControls = previousControllerControls;
+        controllerOptions = null;
+        Monitor.Log("DKQA restored the original runtime controller options.", LogLevel.Info);
     }
 
     private void AssertNativeBehavior()

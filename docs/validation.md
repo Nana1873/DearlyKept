@@ -31,9 +31,64 @@ Evidence: `.sdvkit/logs/package.log`,
 `.sdvkit/tests/journal-core-build/results-archive.log`, and the JSON round trips
 under `.sdvkit/tests/journal-core-evidence/`.
 
-**Pending for the changed archive capabilities:** actual personalized text
-capture, birthday transcript capture, filters and reader controls/layout, and
-their persistence through a real save and process restart.
+Actual game acceptance passed for this unchanged package:
+
+- A clearly QA-authored long letter passed through the real vanilla mail
+  viewer: three original pages, 1,100 prepared characters, the actual player's
+  name, and one ordinary Cookie. Its full archived text matched the independent
+  menu snapshot, including the final sentence and signature.
+- Mom's actual vanilla letter preserved its full personalized message and
+  ordinary Cookie receipt. Neither letter's item/title commands leaked into
+  the archive. The exact mail-to-sender extension was exercised by the QA letter.
+- Happy Birthday's actual Content Patcher preview created no gift or history.
+- A two-page QA greeting supplied through Happy Birthday's real Evelyn asset
+  was displayed and advanced with actual input. Both personalized pages, without
+  dialogue commands, matched the archived transcript exactly after the actual
+  gift handoff. The harness did not construct a journal entry or call gift methods.
+- Gus's unmodified birthday greeting used the real full-backpack debris path.
+  Its actual displayed text and Cookie were recorded once; normal pickup did
+  not duplicate the receipt. Both birthday assertions passed.
+- Occasion filtering selected two birthday gifts out of four receipts; adding
+  the Evelyn sender filter selected exactly her birthday receipt.
+- English at 100% and German at 150% UI scale were visually inspected at a
+  physical 1280x720 viewport. The long message reader paginated to three and
+  five pages respectively; its ending remained readable. Item quantities,
+  dates, source labels, filters and buttons fit the inspected layouts.
+- Actual controller A opened a message, B returned to the archive, and a right
+  shoulder press advanced exactly one reader page. With the game's controller
+  mode fixed on for the synthetic-input fixture, a second B closed to the world;
+  the menu observation confirmed `menuOpen=false`.
+- Clearing the isolated inventory left all four receipts and texts unchanged.
+  All reading/filter navigation preserved their complete JSON. Normal sleep
+  raised SMAPI `Saved` at 12:09:32 local time. A new process loaded the same
+  fixture **without Happy Birthday or its dependencies**; the full journal JSON
+  and empty inventory matched the checkpoint exactly.
+
+Launches: `6135726392a948439a45947f46ad6f65` (PID 9016) and
+`a2c4edf5dee2473b8c486b10b7ac57eb` (PID 7808), same registered fixture as the
+baseline below. Both loaded target build identity
+`sha256:501c4069efd36a2713b67a8646a4abb38cefbf6f5eb74eb11a82d038b9454ef1`.
+Evidence is under `.sdvkit/evidence/archive/`: launch/status JSON,
+`run-1-smapi.log`, `run-2-smapi.log`, `run-1-checkpoint.json`,
+`controller-exit-menu.json`, and the `SDVKit-archive-*.png` screenshots.
+The screenshot named `archive-reloaded-de-100` actually shows the game's
+English startup locale; it is not German-100% acceptance evidence.
+
+One attempted shoulder input used an invalid SMAPI button name and was rejected
+by SDVKit. The corrected `RightShoulder` input passed. Synthetic controller
+disconnects in Auto mode also opened the vanilla pause menu; commands requiring
+a closed menu were rejected and retried. The final controller replay used a
+runtime-only ForceOn setting, not a product-code workaround.
+
+After all functional assertions and the final controller exit observation,
+the second game process was stopped outside this task's lifecycle commands at
+12:11:50; the source of that stop was not established. Logs and screenshots were
+secured. The isolated `default_options` file still contained `Auto` and
+`gamepadControls=false`, with a timestamp before the temporary controller setting.
+A subsequent public CLI stop/reset reported no problems,
+`stagingRemoved=true`, and `fixtureReset=true`; PID 7808 was absent. See
+`run-2-external-stop-status.json`, `run-2-stop.json`, and `final-reset.json`.
+Normal saves and normal Mods were not selected or modified.
 
 ## Completed journal baseline
 

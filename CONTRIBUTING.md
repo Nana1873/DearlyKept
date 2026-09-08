@@ -19,6 +19,10 @@ dotnet .\.sdvkit\tests\bin\DearlyKept.CoreTests\release\DearlyKept.CoreTests.dll
 The independent live harness is under `tests/LiveHarness`. Stage it only as an
 explicit companion in an SDVKit-owned disposable-world review. It refuses
 commands outside that fixture. Never install it into a normal game's Mods folder.
+For synthetic controller input, `dkqa controller on` selects the game's ForceOn
+mode for the current runtime to avoid Auto-mode disconnect pauses. Use
+`dkqa controller restore` before saving or stopping. This is a fixture setting,
+not a mod requirement or production behavior change.
 Acceptance is recorded per candidate and capability in
 [validation](docs/validation.md). Earlier receipt and persistence results do not
 establish the newer text-capture, filter, or message-view behavior.
