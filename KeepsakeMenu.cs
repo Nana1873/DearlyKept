@@ -579,8 +579,8 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
             DrawButton(b, readBounds, i18n.Get("menu.read").ToString(), filterFocus == FilterFocus.None);
             if (entries.Count > visibleRows)
             {
-                DrawButton(b, previousBounds, "<", false, firstVisibleIndex > 0);
-                DrawButton(b, nextBounds, ">", false, firstVisibleIndex + visibleRows < entries.Count);
+                DrawArrowButton(b, previousBounds, false, firstVisibleIndex > 0);
+                DrawArrowButton(b, nextBounds, true, firstVisibleIndex + visibleRows < entries.Count);
                 string range = i18n.Get("menu.range", new { first = firstVisibleIndex + 1, last = Math.Min(entries.Count, firstVisibleIndex + visibleRows), total = entries.Count }).ToString();
                 DrawCentered(b, range, Game1.smallFont, new Rectangle(previousBounds.Right + 4, previousBounds.Y, nextBounds.Left - previousBounds.Right - 8, previousBounds.Height), MutedText);
             }
@@ -690,8 +690,8 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
         DrawBox(b, messageBounds);
         if (messagePages.Count > 0)
             b.DrawString(Game1.smallFont, messagePages[messagePage], new Vector2(messageBounds.X + 20, messageBounds.Y + 16), Game1.textColor);
-        DrawButton(b, messagePreviousBounds, "<", false, messagePage > 0);
-        DrawButton(b, messageNextBounds, ">", false, messagePage + 1 < messagePages.Count);
+        DrawArrowButton(b, messagePreviousBounds, false, messagePage > 0);
+        DrawArrowButton(b, messageNextBounds, true, messagePage + 1 < messagePages.Count);
         DrawButton(b, backBounds, i18n.Get("menu.back").ToString(), false);
         string page = i18n.Get("menu.message-page", new { current = messagePage + 1, total = messagePages.Count }).ToString();
         DrawCentered(b, page, Game1.smallFont,
@@ -714,6 +714,19 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
         DrawCentered(b, text, Game1.smallFont, bounds, enabled ? Game1.textColor : MutedText * 0.55f);
     }
 
+    private static void DrawArrowButton(SpriteBatch b, Rectangle bounds, bool right, bool enabled)
+    {
+        bool hovered = bounds.Contains(Game1.getMouseX(), Game1.getMouseY());
+        DrawBox(b, bounds, enabled && hovered ? Highlight : Color.White);
+        Color color = enabled ? Game1.textColor : MutedText * 0.55f;
+        // Draw pixel geometry: Stardew's fonts map '<' to a heart glyph.
+        for (int column = 0; column < 7; column++)
+        {
+            int halfHeight = right ? 6 - column : column;
+            b.Draw(Game1.staminaRect, new Rectangle(bounds.Center.X - 7 + column * 2,
+                bounds.Center.Y - halfHeight * 2 - 1, 2, halfHeight * 4 + 2), color);
+        }
+    }
     private static void DrawCentered(SpriteBatch b, string text, SpriteFont font, Rectangle bounds, Color color)
     {
         text = FitText(text, font, bounds.Width - 20);

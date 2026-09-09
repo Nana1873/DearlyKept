@@ -93,6 +93,8 @@ internal sealed partial class KeepsakeMenu
     private Rectangle PickerArea => new(xPositionOnScreen + 28, yPositionOnScreen + 88, width - 56, height - 156);
     private int PickerRows => Math.Max(1, (PickerArea.Height - 100) / 40);
     private Rectangle PickerRow(int index) => new(PickerArea.X + 20, PickerArea.Y + 54 + index * 40, PickerArea.Width - 40, 38);
+    private Rectangle PickerPreviousBounds => new(PickerArea.X + 20, PickerArea.Bottom - 44, 48, 40);
+    private Rectangle PickerNextBounds => new(PickerArea.Right - 68, PickerArea.Bottom - 44, 48, 40);
     private void MovePicker(int step)
     {
         if (picker == null) return;
@@ -117,8 +119,8 @@ internal sealed partial class KeepsakeMenu
         for (int row = 0; row < PickerRows && pickerFirst + row < picker.Count; row++)
             DrawButton(b, PickerRow(row), picker[pickerFirst + row].Label, pickerFirst + row == pickerIndex);
         Rectangle footer = new(PickerArea.X + 20, PickerArea.Bottom - 44, PickerArea.Width - 40, 40);
-        DrawButton(b, new Rectangle(footer.X, footer.Y, 48, 40), "<", false, pickerFirst > 0);
-        DrawButton(b, new Rectangle(footer.Right - 48, footer.Y, 48, 40), ">", false, pickerFirst + PickerRows < picker.Count);
+        DrawArrowButton(b, PickerPreviousBounds, false, pickerFirst > 0 && !captureBinding);
+        DrawArrowButton(b, PickerNextBounds, true, pickerFirst + PickerRows < picker.Count && !captureBinding);
         DrawCentered(b, i18n.Get("menu.pick-help"), Game1.smallFont, new Rectangle(footer.X + 52, footer.Y, footer.Width - 104, 40), MutedText);
     }
 
@@ -130,7 +132,8 @@ internal sealed partial class KeepsakeMenu
             if (captureBinding) return true;
             for (int row = 0; row < PickerRows && pickerFirst + row < picker.Count; row++)
                 if (PickerRow(row).Contains(x, y)) { pickerIndex = pickerFirst + row; ChoosePicker(); return true; }
-            if (y >= PickerArea.Bottom - 44) MovePicker(x < PickerArea.Center.X ? -PickerRows : PickerRows);
+            if (PickerPreviousBounds.Contains(x, y) && pickerFirst > 0) MovePicker(-PickerRows);
+            else if (PickerNextBounds.Contains(x, y) && pickerFirst + PickerRows < picker.Count) MovePicker(PickerRows);
             return true;
         }
         if (messageEntry != null) return false;
