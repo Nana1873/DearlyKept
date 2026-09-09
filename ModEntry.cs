@@ -7,6 +7,7 @@ internal sealed class ModEntry : Mod
 {
     private ModConfig Config = null!;
     private GiftJournal journal = null!;
+    private IGenericModConfigMenuApi? configMenu;
 
     public override void Entry(IModHelper helper)
     {
@@ -22,6 +23,7 @@ internal sealed class ModEntry : Mod
             () => Config.CaptureBirthdayGifts && birthday.IsActive);
         capture.Register();
         GiftPatches.Apply(ModManifest.UniqueID, capture);
+        helper.Events.GameLoop.GameLaunched += (_, _) => RegisterConfigMenu();
 
         helper.Events.Input.ButtonsChanged += (_, _) =>
         {
@@ -51,10 +53,26 @@ internal sealed class ModEntry : Mod
     {
         if (!Context.IsPlayerFree)
             return;
-        Game1.activeClickableMenu = new KeepsakeMenu(Helper.Translation, journal, FormatNote, SenderName, Config, () => Helper.WriteConfig(Config));
+        Game1.activeClickableMenu = new KeepsakeMenu(Helper.Translation, journal, FormatNote, SenderName, configMenu is null ? null : () => configMenu.OpenModMenuAsChildMenu(ModManifest));
         Game1.playSound("bigSelect");
     }
 
+    private void RegisterConfigMenu()
+    {
+        configMenu = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
+        if (configMenu is null) return;
+        configMenu.Register(ModManifest, () => Config = new ModConfig(), () => Helper.WriteConfig(Config));
+        configMenu.AddKeybindList(ModManifest, () => Config.OpenKeepsakes, value => Config.OpenKeepsakes = value,
+            () => Helper.Translation.Get("menu.setting-key"), fieldId: nameof(ModConfig.OpenKeepsakes));
+        configMenu.AddBoolOption(ModManifest, () => Config.CaptureMailGifts, value => Config.CaptureMailGifts = value,
+            () => Helper.Translation.Get("menu.setting-mail"), fieldId: nameof(ModConfig.CaptureMailGifts));
+        configMenu.AddBoolOption(ModManifest, () => Config.CaptureBirthdayGifts, value => Config.CaptureBirthdayGifts = value,
+            () => Helper.Translation.Get("menu.setting-birthday"), fieldId: nameof(ModConfig.CaptureBirthdayGifts));
+        configMenu.AddBoolOption(ModManifest, () => Config.CaptureMarriageOverhaulGifts, value => Config.CaptureMarriageOverhaulGifts = value,
+            () => Helper.Translation.Get("menu.setting-marriage"), fieldId: nameof(ModConfig.CaptureMarriageOverhaulGifts));
+        configMenu.AddBoolOption(ModManifest, () => Config.CaptureAnniversaryGifts, value => Config.CaptureAnniversaryGifts = value,
+            () => Helper.Translation.Get("menu.setting-anniversary"), fieldId: nameof(ModConfig.CaptureAnniversaryGifts));
+    }
     private string SenderName(string id)
     {
         if (id is "Mom" or "Dad")

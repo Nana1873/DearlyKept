@@ -48,12 +48,10 @@
   "menu.message-incomplete": "This message exceeds the 16,000-character limit. Its saved text is incomplete.",
   "menu.season-all": "All seasons",
   "menu.settings": "Settings",
-  "menu.on": "On",
   "menu.setting-mail": "Record gift mail",
   "menu.setting-anniversary": "Record Wedding Anniversaries",
   "menu.status-readonly": "Archive could not fully load – recording paused. See the SMAPI log.",
   "menu.pick-occasion": "Choose an occasion",
-  "menu.bind-prompt": "Press a new key · Esc: Cancel",
   "menu.no-results": "No matching memories",
   "menu.year-all": "All years",
   "menu.setting-key": "Open journal key",
@@ -63,6 +61,5 @@
   "menu.search": "Search item, sender, message (F3)",
   "menu.setting-marriage": "Record Marriage Overhaul",
   "menu.status-save-error": "Archive could not be saved. Please check the SMAPI log.",
-  "menu.pick-sender": "Choose a sender",
-  "menu.off": "Off"
+  "menu.pick-sender": "Choose a sender"
 }

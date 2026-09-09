@@ -13,7 +13,7 @@ Press **K** to browse your gifts and reread their letters and messages.
 - See gifts with item previews, senders, dates and occasions.
 - Search by item, sender or message, and combine filters for occasion, year and season.
 - Keep a personal journal for each farmer in each save.
-- Change the journal key and recording options in **Settings** (**F2**).
+- Configure the journal key and recording options with **Generic Mod Config Menu**.
 - Use a mouse, keyboard or controller. Available in **English and German**.
 
 The journal takes no inventory space. Gifts remain ordinary items you can use,
@@ -27,6 +27,13 @@ Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**.
 2. Extract the mod's `DearlyKept` folder into `Stardew Valley/Mods`.
 3. Launch the game through SMAPI and receive a supported gift.
 4. Press **K** with no other menu or event open.
+
+## Settings
+
+Install [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098)
+to change settings in game. Open Dearly Kept in GMCM, or use the journal's
+**Settings** button (**F2**). There is no separate settings menu.
+Without GMCM, the mod uses its defaults or your existing `config.json`.
 
 ## Supported gifts and mods
 

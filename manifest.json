@@ -19,6 +19,11 @@
     {
       "UniqueID": "Kantrip.WeddingAnniversaries",
       "IsRequired": false
+    },
+    {
+      "UniqueID": "spacechase0.GenericModConfigMenu",
+      "IsRequired": false,
+      "MinimumVersion": "1.16.0"
     }
   ]
 }

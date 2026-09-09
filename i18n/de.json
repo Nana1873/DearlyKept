@@ -48,12 +48,10 @@
   "menu.message-incomplete": "Diese Nachricht überschreitet die Grenze von 16.000 Zeichen. Der gespeicherte Text ist unvollständig.",
   "menu.season-all": "Alle Jahreszeiten",
   "menu.settings": "Einstellungen",
-  "menu.on": "An",
   "menu.setting-mail": "Briefgeschenke aufzeichnen",
   "menu.setting-anniversary": "Wedding Anniversaries aufzeichnen",
   "menu.status-readonly": "Archiv nicht vollständig geladen – Aufzeichnung pausiert. Siehe SMAPI-Log.",
   "menu.pick-occasion": "Anlass auswählen",
-  "menu.bind-prompt": "Neue Taste drücken · Esc: Abbrechen",
   "menu.no-results": "Keine passenden Erinnerungen",
   "menu.year-all": "Alle Jahre",
   "menu.setting-key": "Taste zum Öffnen",
@@ -63,6 +61,5 @@
   "menu.search": "Suchen: Gegenstand, Absender, Nachricht (F3)",
   "menu.setting-marriage": "Marriage Overhaul aufzeichnen",
   "menu.status-save-error": "Archiv konnte nicht gespeichert werden. Bitte SMAPI-Log prüfen.",
-  "menu.pick-sender": "Absender auswählen",
-  "menu.off": "Aus"
+  "menu.pick-sender": "Absender auswählen"
 }

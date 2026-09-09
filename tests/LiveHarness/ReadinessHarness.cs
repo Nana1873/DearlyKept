@@ -115,6 +115,7 @@ internal sealed partial class ModEntry
         foreach (string name in new[] { "originBounds", "senderBounds", "yearBounds", "seasonBounds", "readBounds", "settingsBounds" })
         {
             Rectangle bounds = (Rectangle)menu.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(menu)!;
+            if (name == "settingsBounds" && bounds == Rectangle.Empty) continue;
             Check(bounds.Width > 0 && bounds.Height > 0 && view.Contains(bounds), name + " has positive in-viewport hit bounds");
         }
         var entries = (System.Collections.ICollection)menu.GetType().GetField("entries", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(menu)!;

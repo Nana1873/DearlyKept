@@ -49,15 +49,14 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
     private string hoverText = "";
     private int displayedRevision = int.MinValue;
 
-    public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName, ModConfig? config = null, Action? saveConfig = null)
+    public KeepsakeMenu(ITranslationHelper i18n, GiftJournal journal, Func<GiftEntry, string> formatNote, Func<string, string> senderName, Action? openConfigMenu = null)
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
         this.i18n = i18n;
         this.journal = journal;
         this.formatNote = formatNote;
         this.senderName = senderName;
-        settings = config;
-        persistSettings = saveConfig;
+        this.openConfigMenu = openConfigMenu;
         searchBox = new TextBox(Game1.content.Load<Texture2D>("LooseSprites\\textBox"), null, Game1.smallFont, Game1.textColor) { Text = "", textLimit = 160 };
         exitFunction += () => { searchBox.Selected = false; };
         Layout();
@@ -90,8 +89,8 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
         seasonBounds = new Rectangle(yearBounds.Right + 12, originBounds.Y, filterWidth, 44);
         searchBox.X = listBounds.X;
         searchBox.Y = originBounds.Bottom + 10;
-        searchBox.Width = width - 286;
-        settingsBounds = new Rectangle(searchBox.X + searchBox.Width + 14, searchBox.Y, 208, 44);
+        searchBox.Width = width - (openConfigMenu is null ? 64 : 286);
+        settingsBounds = openConfigMenu is null ? Rectangle.Empty : new Rectangle(searchBox.X + searchBox.Width + 14, searchBox.Y, 208, 44);
         messageBounds = new Rectangle(xPositionOnScreen + 32, yPositionOnScreen + (compactLayout ? 146 : 164), width - 64,
             actionTop - yPositionOnScreen - (compactLayout ? 162 : 180));
         messagePreviousBounds = new Rectangle(messageBounds.X, actionTop, 48, 48);
@@ -387,7 +386,7 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
 
     public override void receiveRightClick(int x, int y, bool playSound = true)
     {
-        if (picker != null) { picker = null; captureBinding = false; return; }
+        if (picker != null) { picker = null; return; }
         if (messageEntry != null)
             CloseMessage();
         else if (originBounds.Contains(x, y))
@@ -454,7 +453,8 @@ internal sealed partial class KeepsakeMenu : IClickableMenu
         if (left || right)
         {
             int nextFocus = filterFocus == FilterFocus.None ? (right ? 2 : 1) : (int)filterFocus + (right ? 1 : -1);
-            filterFocus = (FilterFocus)(nextFocus < 1 ? 6 : nextFocus > 6 ? 1 : nextFocus);
+            int lastFocus = openConfigMenu is null ? 5 : 6;
+            filterFocus = (FilterFocus)(nextFocus < 1 ? lastFocus : nextFocus > lastFocus ? 1 : nextFocus);
             return;
         }
         if (previousChoice && filterFocus is FilterFocus.Occasion or FilterFocus.Sender)

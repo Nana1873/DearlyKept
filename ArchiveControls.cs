@@ -1,7 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -10,8 +9,7 @@ namespace DearlyKept;
 internal sealed partial class KeepsakeMenu
 {
     private readonly TextBox searchBox;
-    private readonly ModConfig? settings;
-    private readonly Action? persistSettings;
+    private readonly Action? openConfigMenu;
     private Rectangle yearBounds, seasonBounds, settingsBounds;
     private int yearFilter;
     private string seasonFilter = "";
@@ -21,7 +19,6 @@ internal sealed partial class KeepsakeMenu
     private List<(string Label, Action Select)>? picker;
     private string pickerTitle = "";
     private int pickerIndex, pickerFirst;
-    private bool captureBinding;
     private int layoutWidth, layoutHeight;
 
     private static string? SourceName(GiftEntry entry) => entry.SourceDisplayName ?? (entry.SourceModId switch
@@ -72,7 +69,7 @@ internal sealed partial class KeepsakeMenu
         if (searchBox.Text.Length == 0 && !searchBox.Selected)
             b.DrawString(Game1.smallFont, FitText(i18n.Get("menu.search"), Game1.smallFont, searchBox.Width - 28),
                 new Vector2(searchBox.X + 14, searchBox.Y + 10), MutedText);
-        DrawButton(b, settingsBounds, i18n.Get("menu.settings"), filterFocus == FilterFocus.Settings, settings != null);
+        if (openConfigMenu != null) DrawButton(b, settingsBounds, i18n.Get("menu.settings"), filterFocus == FilterFocus.Settings);
     }
 
     private void OpenPicker(FilterFocus focus)
@@ -114,13 +111,13 @@ internal sealed partial class KeepsakeMenu
         if (picker == null) return;
         b.Draw(Game1.fadeToBlackRect, new Rectangle(xPositionOnScreen, yPositionOnScreen, width, height), Color.Black * .5f);
         DrawBox(b, PickerArea);
-        DrawCentered(b, captureBinding ? i18n.Get("menu.bind-prompt") : pickerTitle, Game1.smallFont,
+        DrawCentered(b, pickerTitle, Game1.smallFont,
             new Rectangle(PickerArea.X + 20, PickerArea.Y + 6, PickerArea.Width - 40, 44), Game1.textColor);
         for (int row = 0; row < PickerRows && pickerFirst + row < picker.Count; row++)
             DrawButton(b, PickerRow(row), picker[pickerFirst + row].Label, pickerFirst + row == pickerIndex);
         Rectangle footer = new(PickerArea.X + 20, PickerArea.Bottom - 44, PickerArea.Width - 40, 40);
-        DrawArrowButton(b, PickerPreviousBounds, false, pickerFirst > 0 && !captureBinding);
-        DrawArrowButton(b, PickerNextBounds, true, pickerFirst + PickerRows < picker.Count && !captureBinding);
+        DrawArrowButton(b, PickerPreviousBounds, false, pickerFirst > 0);
+        DrawArrowButton(b, PickerNextBounds, true, pickerFirst + PickerRows < picker.Count);
         DrawCentered(b, i18n.Get("menu.pick-help"), Game1.smallFont, new Rectangle(footer.X + 52, footer.Y, footer.Width - 104, 40), MutedText);
     }
 
@@ -128,8 +125,7 @@ internal sealed partial class KeepsakeMenu
     {
         if (picker != null)
         {
-            if (!PickerArea.Contains(x, y)) { picker = null; captureBinding = false; return true; }
-            if (captureBinding) return true;
+            if (!PickerArea.Contains(x, y)) { picker = null; return true; }
             for (int row = 0; row < PickerRows && pickerFirst + row < picker.Count; row++)
                 if (PickerRow(row).Contains(x, y)) { pickerIndex = pickerFirst + row; ChoosePicker(); return true; }
             if (PickerPreviousBounds.Contains(x, y) && pickerFirst > 0) MovePicker(-PickerRows);
@@ -153,20 +149,12 @@ internal sealed partial class KeepsakeMenu
                     (Action)(() => { seasonFilter = value; ApplyFilters(null); }))));
             return true;
         }
-        if (settingsBounds.Contains(x, y) && settings != null) { OpenSettings(); return true; }
+        if (settingsBounds.Contains(x, y) && openConfigMenu != null) { OpenSettings(); return true; }
         return false;
     }
 
     private bool HandleControlKey(Keys key, bool cancel, bool activate, bool up, bool down)
     {
-        if (captureBinding)
-        {
-            if (key is Keys.None or Keys.LeftShift or Keys.RightShift or Keys.LeftControl or Keys.RightControl or Keys.LeftAlt or Keys.RightAlt) return true;
-            captureBinding = false;
-            if (key != Keys.Escape && key is not (Keys.None or Keys.LeftShift or Keys.RightShift or Keys.LeftControl or Keys.RightControl))
-            { settings!.OpenKeepsakes = KeybindList.Parse(key.ToString()); persistSettings?.Invoke(); }
-            OpenSettings(); return true;
-        }
         if (picker != null)
         {
             if (cancel) picker = null;
@@ -183,7 +171,7 @@ internal sealed partial class KeepsakeMenu
             return true;
         }
         if (messageEntry != null) return false;
-        if (key == Keys.F2 && settings != null) { OpenSettings(); return true; }
+        if (key == Keys.F2 && openConfigMenu != null) { OpenSettings(); return true; }
         if (key == Keys.F3) { searchBox.Selected = true; return true; }
         if (key == Keys.F4) { HandleControlClick(yearBounds.Center.X, yearBounds.Center.Y); return true; }
         if (key == Keys.F5) { HandleControlClick(seasonBounds.Center.X, seasonBounds.Center.Y); return true; }
@@ -192,18 +180,8 @@ internal sealed partial class KeepsakeMenu
 
     private void OpenSettings()
     {
-        if (settings == null) return;
-        string Toggle(string key, bool value) => i18n.Get(key) + ": " + i18n.Get(value ? "menu.on" : "menu.off");
-        Action Change(Action apply) => () => { apply(); persistSettings?.Invoke(); OpenSettings(); };
-        BeginPicker(i18n.Get("menu.settings"), new (string, Action)[]
-        {
-            (Toggle("menu.setting-mail", settings.CaptureMailGifts), Change(() => settings.CaptureMailGifts = !settings.CaptureMailGifts)),
-            (Toggle("menu.setting-birthday", settings.CaptureBirthdayGifts), Change(() => settings.CaptureBirthdayGifts = !settings.CaptureBirthdayGifts)),
-            (Toggle("menu.setting-marriage", settings.CaptureMarriageOverhaulGifts), Change(() => settings.CaptureMarriageOverhaulGifts = !settings.CaptureMarriageOverhaulGifts)),
-            (Toggle("menu.setting-anniversary", settings.CaptureAnniversaryGifts), Change(() => settings.CaptureAnniversaryGifts = !settings.CaptureAnniversaryGifts)),
-            (i18n.Get("menu.setting-key") + ": " + settings.OpenKeepsakes, () => { OpenSettings(); captureBinding = true; }),
-            (i18n.Get("menu.back"), () => { })
-        });
+        searchBox.Selected = false;
+        openConfigMenu?.Invoke();
     }
 
     private void ActivateFocusedControl()
