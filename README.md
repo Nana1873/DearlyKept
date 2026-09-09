@@ -1,67 +1,63 @@
 # Dearly Kept
 
-**A gift journal for the little things people give you.**
+**Keep the memory. Enjoy the gift.**
 
-Eat Mom's cookies. Store a friend's parcel. Dearly Kept remembers who gave you
-what, when, and the original letter or displayed gift dialogue. Press **K** to
-revisit those memories without keeping anything in your backpack.
+Dearly Kept is a gift journal for Stardew Valley. It remembers who gave you a
+present, what you received, and the message that came with it. Eat the cookies,
+use the gift, and come back to the memory whenever you like.
 
-## Features
+## Your gift journal
 
-- A separate journal for each player in each save, with newest gifts first.
-- Item previews, available villager portraits, quantities, dates and occasions.
-- Combined sender, occasion, year and season filters, plus message/item search.
-- A paginated reader that keeps the original captured language and wording.
-- In-game settings and hotkey rebinding (F2); keyboard, mouse and controller input.
-- English and German. No deletion feature, inventory tags or stacking changes.
+Press **K** to browse your gifts and reread their letters and messages.
 
-## Install
+- See gifts with item previews, senders, dates and occasions.
+- Search by item, sender or message, and combine filters for occasion, year and season.
+- Keep a personal journal for each farmer in each save.
+- Change the journal key and recording options in **Settings** (**F2**).
+- Use a mouse, keyboard or controller. Available in **English and German**.
 
-Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0+**.
+The journal takes no inventory space. Gifts remain ordinary items you can use,
+stack, store or sell.
 
-1. Install SMAPI.
-2. Extract the `DearlyKept` folder into `Stardew Valley/Mods`.
-3. Launch through SMAPI and receive a supported gift.
-4. Press **K** when no other menu or event is open, or enter `dk` in the SMAPI console.
+## Installation
 
-Recording starts after installation. Past gifts are not reconstructed. Memories
-persist with the normal game save; quitting without saving discards that day's
-changes. Change capture options and the hotkey in **Settings**, or edit
-`config.json` while the game is closed. Removing the mod leaves items unchanged.
+Requires **Stardew Valley 1.6.15** and **SMAPI 4.5.0 or later**.
 
-## Supported gifts
+1. Install [SMAPI](https://smapi.io/).
+2. Extract the mod's `DearlyKept` folder into `Stardew Valley/Mods`.
+3. Launch the game through SMAPI and receive a supported gift.
+4. Press **K** with no other menu or event open.
 
-| Source | Supported deliveries |
+## Supported gifts and mods
+
+Dearly Kept records supported vanilla gift mail on its own. These optional mod
+integrations are detected automatically; no separate compatibility patch is needed.
+
+| Source | What gets recorded |
 | --- | --- |
-| Vanilla mail | 26 mapped gift and thank-you letters, including Mom and Evelyn. |
-| Happy Birthday **3.21.4** (optional) | Normal NPC birthday gifts, parent and belated gift mail. |
-| Marriage Overhaul **1.7.4** (optional) | Birthday gifts and delayed project rewards, including fridge delivery. |
-| Wedding Anniversaries **2.1** (optional) | Anniversary dialogue gifts, including normal overflow. |
+| Vanilla gift mail | Selected gift and thank-you letters, including Mom's cookies and Evelyn's leek-request reward. |
+| [Happy Birthday](https://www.nexusmods.com/stardewvalley/mods/520) | NPC birthday gifts, parent gift mail and belated birthday mail. |
+| [Marriage Overhaul](https://www.nexusmods.com/stardewvalley/mods/47395) | Birthday gifts and project rewards, including gifts delivered to the fridge. |
+| [Wedding Anniversaries](https://www.nexusmods.com/stardewvalley/mods/32078) | Gifts received through anniversary dialogue. |
 
-Optional mods and their requirements are installed separately. Vanilla mail
-requires only SMAPI. Other mods can extend the exact mail mapping; see the
-[mail and read-only API reference](docs/mail-support.md).
+Tested with Happy Birthday **3.21.4**, Marriage Overhaul **1.7.4** and Wedding
+Anniversaries **2.1**. Install those mods and their own requirements separately
+if you want their gifts.
 
-Direct vanilla spouse handoffs, Winter Star gifts, quest hand-ins, custom
-mail-framework menus, unlisted gift mods and Happy Birthday's spouse-party event
-are not automatically captured. Only displayed dialogue pages can be recorded.
-Messages exceeding 16,000 characters show an incomplete-text notice. Missing
-custom content retains its saved names.
+## Good to know
 
-Single-player and two-player host/farmhand network play were tested, including
-saving with the farmhand offline, rejoining and restarting. The tested network
-setup has the mod on both peers. One-sided installation and splitscreen are not
-yet live-verified. Other gift mods retain their own multiplayer requirements.
-Marriage Overhaul milestone dialogue can replace a queued Wedding Anniversaries
-gift; Dearly Kept does not change that interaction or invent an undelivered gift.
+- Recording starts when you install the mod; earlier gifts cannot be recovered.
+- Your journal saves with the game. Unsaved memories are lost if you quit without saving.
+- Messages keep the language they were received in. Only dialogue pages you actually open are recorded.
+- Direct vanilla spouse gifts, Winter Star gifts, quest hand-ins and Happy Birthday's spouse-party event are not currently supported. Other gift mods and custom mail menus may not be captured.
+- Multiplayer has been tested with Dearly Kept installed on both host and farmhand. Splitscreen and installation on only one player are not yet verified.
 
-## Development and credits
+## Help and credits
 
-[Build and contribute](CONTRIBUTING.md) · [Report an issue](https://github.com/Nana1873/DearlyKept/issues)
+[Report a problem](https://github.com/Nana1873/DearlyKept/issues) ·
+[Contribute](CONTRIBUTING.md) · [Mod author reference](docs/mail-support.md)
 
-Code authored with Codex and developed using [SDVKit](https://github.com/Nana1873/SDVKit).
-No generated artwork or redistributed game textures are included. The interface
-uses your installed game's assets. Thanks to the SMAPI and gift-mod authors.
+Created by Nana1873 with Codex and [SDVKit](https://github.com/Nana1873/SDVKit).
+Thanks to the SMAPI community and the authors of the supported gift mods.
 
-[MIT license](LICENSE), copyright 2026 Nana1873. Stardew Valley and its assets
-belong to their respective owners.
+[MIT license](LICENSE). Stardew Valley and its assets belong to their respective owners.
